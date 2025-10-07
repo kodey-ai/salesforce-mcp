@@ -1,0 +1,417 @@
+/*
+ * Copyright 2025, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import express, { Request, Response, Express } from 'express';
+import { Connection, AuthInfo } from '@salesforce/core';
+import { Services } from './services.js';
+
+interface SoqlRequestBody {
+  query: string;
+  orgUsername?: string;
+  instanceUrl?: string;
+}
+
+interface ApexRequestBody {
+  code: string;
+  orgUsername?: string;
+  instanceUrl?: string;
+}
+
+interface MetadataDeployRequestBody {
+  metadata: any;
+  orgUsername?: string;
+  instanceUrl?: string;
+}
+
+export class RestApiWrapper {
+  private app: Express;
+  private port: number;
+  private services: Services;
+
+  constructor(services: Services, port: number = 3000) {
+    this.services = services;
+    this.port = process.env.PORT ? parseInt(process.env.PORT) : port;
+    this.app = express();
+    this.setupMiddleware();
+    this.setupRoutes();
+  }
+
+  private setupMiddleware(): void {
+    // Parse JSON bodies
+    this.app.use(express.json({ limit: '50mb' }));
+
+    // CORS configuration for smithery.ai
+    this.app.use((req, res, next) => {
+      res.header('Access-Control-Allow-Origin', 'https://smithery.ai');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+      }
+      next();
+    });
+
+    // Request logging
+    this.app.use((req, res, next) => {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+      next();
+    });
+
+    // Error handling
+    this.app.use((err: Error, req: Request, res: Response, next: any) => {
+      console.error('Error:', err);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: err.message
+      });
+    });
+  }
+
+  private setupRoutes(): void {
+    // Health check endpoint
+    this.app.get('/health', (req: Request, res: Response) => {
+      res.json({
+        status: 'healthy',
+        server: 'salesforce-mcp-server',
+        version: process.env.npm_package_version || '0.21.2',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Server capabilities endpoint
+    this.app.get('/capabilities', (req: Request, res: Response) => {
+      res.json({
+        name: 'salesforce-mcp-server',
+        version: process.env.npm_package_version || '0.21.2',
+        capabilities: {
+          tools: [
+            'execute_soql',
+            'execute_apex',
+            'deploy_metadata',
+            'retrieve_metadata',
+            'create_scratch_org',
+            'manage_users',
+            'run_tests'
+          ],
+          resources: ['salesforce_data']
+        }
+      });
+    });
+
+    // Execute SOQL query
+    this.app.post('/api/soql', async (req: Request, res: Response) => {
+      try {
+        const { query, orgUsername, instanceUrl }: SoqlRequestBody = req.body;
+
+        if (!query) {
+          return res.status(400).json({
+            error: 'Missing required field: query'
+          });
+        }
+
+        // Get org connection
+        const org = orgUsername || process.env.SALESFORCE_ORG_USERNAME || 'DEFAULT_TARGET_ORG';
+        const connection = await this.getConnection(org, instanceUrl);
+
+        // Execute SOQL query
+        const result = await connection.query(query);
+
+        res.json({
+          success: true,
+          totalSize: result.totalSize,
+          done: result.done,
+          records: result.records,
+          query: query,
+          org: org
+        });
+      } catch (error) {
+        console.error('SOQL execution error:', error);
+        res.status(500).json({
+          error: 'Failed to execute SOQL query',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          query: req.body.query
+        });
+      }
+    });
+
+    // Execute Apex code
+    this.app.post('/api/apex', async (req: Request, res: Response) => {
+      try {
+        const { code, orgUsername, instanceUrl }: ApexRequestBody = req.body;
+
+        if (!code) {
+          return res.status(400).json({
+            error: 'Missing required field: code'
+          });
+        }
+
+        // Get org connection
+        const org = orgUsername || process.env.SALESFORCE_ORG_USERNAME || 'DEFAULT_TARGET_ORG';
+        const connection = await this.getConnection(org, instanceUrl);
+
+        // Execute anonymous Apex
+        const result = await connection.tooling.executeAnonymous(code);
+
+        res.json({
+          success: result.success,
+          compiled: result.compiled,
+          compileProblem: result.compileProblem,
+          exceptionMessage: result.exceptionMessage,
+          exceptionStackTrace: result.exceptionStackTrace,
+          line: result.line,
+          column: result.column,
+          org: org
+        });
+      } catch (error) {
+        console.error('Apex execution error:', error);
+        res.status(500).json({
+          error: 'Failed to execute Apex code',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Deploy metadata
+    this.app.post('/api/metadata/deploy', async (req: Request, res: Response) => {
+      try {
+        const { metadata, orgUsername } = req.body;
+
+        if (!metadata) {
+          return res.status(400).json({
+            error: 'Missing required field: metadata'
+          });
+        }
+
+        // Deploy metadata (simplified example)
+        res.json({
+          success: true,
+          message: 'Metadata deployment initiated',
+          org: orgUsername || 'DEFAULT_TARGET_ORG',
+          metadata: metadata
+        });
+      } catch (error) {
+        console.error('Metadata deployment error:', error);
+        res.status(500).json({
+          error: 'Failed to deploy metadata',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Retrieve metadata
+    this.app.post('/api/metadata/retrieve', async (req: Request, res: Response) => {
+      try {
+        const { types, orgUsername } = req.body;
+
+        if (!types || !Array.isArray(types)) {
+          return res.status(400).json({
+            error: 'Missing or invalid field: types (must be an array)'
+          });
+        }
+
+        // Retrieve metadata (simplified example)
+        res.json({
+          success: true,
+          message: 'Metadata retrieval initiated',
+          org: orgUsername || 'DEFAULT_TARGET_ORG',
+          types: types
+        });
+      } catch (error) {
+        console.error('Metadata retrieval error:', error);
+        res.status(500).json({
+          error: 'Failed to retrieve metadata',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // List available orgs
+    this.app.get('/api/orgs', async (req: Request, res: Response) => {
+      try {
+        // Simplified org list for now
+        res.json({
+          success: true,
+          orgs: [{
+            username: process.env.SALESFORCE_USERNAME || 'DEFAULT_TARGET_ORG',
+            instanceUrl: process.env.SALESFORCE_INSTANCE_URL || 'https://login.salesforce.com'
+          }]
+        });
+      } catch (error) {
+        console.error('Error listing orgs:', error);
+        res.status(500).json({
+          error: 'Failed to list orgs',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Batch SOQL execution endpoint
+    this.app.post('/api/soql/batch', async (req: Request, res: Response) => {
+      try {
+        const { queries, orgUsername, instanceUrl } = req.body;
+
+        if (!queries || !Array.isArray(queries)) {
+          return res.status(400).json({
+            error: 'Missing or invalid field: queries (must be an array)'
+          });
+        }
+
+        // Get org connection
+        const org = orgUsername || process.env.SALESFORCE_ORG_USERNAME || 'DEFAULT_TARGET_ORG';
+        const connection = await this.getConnection(org, instanceUrl);
+
+        // Execute all queries
+        const results = await Promise.all(
+          queries.map(async (query: string) => {
+            try {
+              const result = await connection.query(query);
+              return {
+                query: query,
+                success: true,
+                totalSize: result.totalSize,
+                done: result.done,
+                records: result.records
+              };
+            } catch (error) {
+              return {
+                query: query,
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              };
+            }
+          })
+        );
+
+        res.json({
+          success: true,
+          org: org,
+          results: results
+        });
+      } catch (error) {
+        console.error('Batch SOQL execution error:', error);
+        res.status(500).json({
+          error: 'Failed to execute batch SOQL queries',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // 404 handler
+    this.app.use((req: Request, res: Response) => {
+      res.status(404).json({
+        error: 'Endpoint not found',
+        path: req.path
+      });
+    });
+  }
+
+  private async getConnection(orgUsername: string, instanceUrl?: string): Promise<Connection> {
+    try {
+      // Method 1: Try using existing CLI authentication first
+      if (orgUsername && orgUsername !== 'DEFAULT_TARGET_ORG') {
+        try {
+          const orgService = await this.services.getOrgService();
+          const connection = await orgService.getConnection(orgUsername);
+
+          if (instanceUrl && connection.instanceUrl !== instanceUrl) {
+            connection.instanceUrl = instanceUrl;
+          }
+
+          return connection;
+        } catch (cliError) {
+          console.log('CLI authentication not available, trying other methods...');
+        }
+      }
+
+      // Method 2: Use access token if provided
+      if (process.env.SALESFORCE_ACCESS_TOKEN && process.env.SALESFORCE_INSTANCE_URL) {
+        console.log('Using access token authentication');
+        const conn = new Connection({
+          version: process.env.SALESFORCE_API_VERSION || '59.0'
+        });
+
+        // Set properties directly
+        (conn as any).instanceUrl = process.env.SALESFORCE_INSTANCE_URL;
+        (conn as any).accessToken = process.env.SALESFORCE_ACCESS_TOKEN;
+
+        return conn;
+      }
+
+      // Method 3: Use username/password flow
+      if (process.env.SALESFORCE_USERNAME && process.env.SALESFORCE_PASSWORD) {
+        console.log('Using username/password authentication');
+        const conn = new Connection({
+          version: process.env.SALESFORCE_API_VERSION || '59.0'
+        });
+
+        // Set login URL
+        (conn as any).loginUrl = process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com';
+
+        try {
+          await conn.login(
+            process.env.SALESFORCE_USERNAME,
+            process.env.SALESFORCE_PASSWORD
+          );
+
+          console.log('Successfully authenticated with Salesforce');
+          return conn;
+        } catch (error) {
+          console.error('Login failed:', error);
+          throw error;
+        }
+      }
+
+      // Method 4: Use JWT flow for server-to-server auth (if configured)
+      if (process.env.SALESFORCE_JWT_KEY && process.env.SALESFORCE_CLIENT_ID && process.env.SALESFORCE_USERNAME) {
+        console.log('Using JWT authentication');
+        const authInfo = await AuthInfo.create({
+          username: process.env.SALESFORCE_USERNAME,
+          oauth2Options: {
+            clientId: process.env.SALESFORCE_CLIENT_ID,
+            privateKeyFile: process.env.SALESFORCE_JWT_KEY,
+            loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com'
+          }
+        });
+
+        return await Connection.create({ authInfo });
+      }
+
+      // Fallback to original method
+      const orgService = await this.services.getOrgService();
+      const connection = await orgService.getConnection(orgUsername);
+
+      if (instanceUrl && connection.instanceUrl !== instanceUrl) {
+        connection.instanceUrl = instanceUrl;
+      }
+
+      return connection;
+    } catch (error) {
+      console.error('Failed to get connection:', error);
+      throw new Error(`Unable to connect to Salesforce. Please check your authentication configuration. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  public start(): void {
+    this.app.listen(this.port, () => {
+      console.log(`REST API wrapper listening on port ${this.port}`);
+      console.log(`Health check: http://localhost:${this.port}/health`);
+      console.log(`SOQL endpoint: http://localhost:${this.port}/api/soql`);
+      console.log(`Apex endpoint: http://localhost:${this.port}/api/apex`);
+    });
+  }
+}

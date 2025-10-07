@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "salesforce": {
+      "command": "node",
+      "args": [
+        "/Users/venkateshmunagala/PycharmProjects/salesforce-mcps/packages/mcp/simple-server.js"
+      ],
+      "env": {
+        "SALESFORCE_USERNAME": "maya@ecotoreda.com",
+        "SALESFORCE_PASSWORD": "Ec0T0red@",
+        "SALESFORCE_LOGIN_URL": "https://zot.my.salesforce.com"
+      }
+    }
+  }
+}
