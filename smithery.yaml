@@ -4,8 +4,9 @@ description: Minimal Salesforce MCP Server for agents
 author: Ecotoreda
 license: MIT
 
-runtime: node
-entrypoint: index.mjs
+runtime: container
 
-build:
-  skip: true
+startCommand:
+  command: node
+  args:
+    - index.mjs
