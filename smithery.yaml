@@ -1,0 +1,29 @@
+name: salesforce-mcp-minimal
+version: 1.0.0
+description: Minimal Salesforce MCP Server for agents
+author: Ecotoreda
+license: MIT
+
+runtime: node
+entrypoint: index.mjs
+
+# No build needed - direct JavaScript
+
+# Environment variables
+env:
+  required:
+    - name: SALESFORCE_USERNAME
+      description: Salesforce username
+      type: string
+    - name: SALESFORCE_PASSWORD
+      description: Salesforce password with security token
+      type: string
+      secret: true
+    - name: SALESFORCE_LOGIN_URL
+      description: Salesforce login URL (https://login.salesforce.com or https://test.salesforce.com)
+      type: string
+
+capabilities:
+  tools:
+    - name: soql_query
+      description: Execute SOQL queries
