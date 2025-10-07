@@ -1,0 +1,11 @@
+# Ignore monorepo files
+packages/
+yarn.lock
+node_modules/
+.git/
+.github/
+
+# Keep only root deployment files
+!smithery.yaml
+!index.mjs
+!package.json

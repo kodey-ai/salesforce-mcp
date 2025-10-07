@@ -4,6 +4,7 @@
   "description": "Minimal Salesforce MCP Server",
   "type": "module",
   "main": "index.mjs",
+  "module": "./index.mjs",
   "scripts": {
     "start": "node index.mjs"
   },
