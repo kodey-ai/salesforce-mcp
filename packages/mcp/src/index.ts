@@ -24,6 +24,7 @@ import { Telemetry } from './telemetry.js';
 import { SfMcpServer } from './sf-mcp-server.js';
 import { registerToolsets } from './utils/registry-utils.js';
 import { Services } from './services.js';
+// import { RestApiWrapper } from './rest-api-wrapper.js';
 
 /**
  * Sanitizes an array of org usernames by replacing specific orgs with a placeholder.
@@ -115,6 +116,16 @@ You can also use special values to control access to orgs:
     'allow-non-ga-tools': Flags.boolean({
       summary: 'Enable the ability to register tools that are not yet generally available (GA)',
     }),
+    'rest-api': Flags.boolean({
+      summary: 'Enable REST API wrapper for HTTP access to MCP tools',
+      description: 'Starts a REST API server alongside the MCP server for HTTP-based interactions',
+    }),
+    'api-port': Flags.integer({
+      summary: 'Port for REST API server',
+      description: 'The port number for the REST API server (default: 3000)',
+      default: 3000,
+      dependsOn: ['rest-api'],
+    }),
   };
 
   public static examples = [
@@ -198,6 +209,16 @@ You can also use special values to control access to orgs:
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error(`✅ Salesforce MCP Server v${this.config.version} running on stdio`);
+
+    // Start REST API wrapper if flag is set
+    // if (flags['rest-api']) {
+    //   const restApi = new RestApiWrapper(services, flags['api-port']);
+    //   restApi.start();
+    //   console.error(`✅ REST API wrapper running on port ${flags['api-port']}`);
+    //   console.error(`  Health check: http://localhost:${flags['api-port']}/health`);
+    //   console.error(`  SOQL endpoint: POST http://localhost:${flags['api-port']}/api/soql`);
+    //   console.error(`  Apex endpoint: POST http://localhost:${flags['api-port']}/api/apex`);
+    // }
   }
 
   protected async catch(error: Error): Promise<void> {

@@ -43,3 +43,19 @@ node_modules
 # os specific files
 .DS_Store
 .idea
+
+# Environment and credential files
+.env
+.env.*
+.env.local
+.env.production
+.env.oauth
+.salesforce-config.json
+.oauth-tokens.json
+.oauth-config.json
+
+# Security files
+*.key
+*.pem
+*.cert
+*-tokens.json
