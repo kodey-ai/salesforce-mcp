@@ -5,7 +5,7 @@ author: Ecotoreda
 license: MIT
 
 runtime: node
-entrypoint: server.js
+entrypoint: simple.mjs
 
 # No build needed - direct JavaScript
 build:
