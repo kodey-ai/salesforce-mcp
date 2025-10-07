@@ -5,3 +5,7 @@ author: Ecotoreda
 license: MIT
 
 runtime: container
+startCommand:
+  command: node
+  args:
+    - index.mjs
