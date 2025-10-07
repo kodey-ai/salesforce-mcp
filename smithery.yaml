@@ -6,6 +6,7 @@ license: MIT
 
 runtime: container
 startCommand:
+  type: stdio
   command: node
   args:
     - index.mjs
