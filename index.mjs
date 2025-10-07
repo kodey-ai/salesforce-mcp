@@ -1,41 +1,32 @@
-#!/usr/bin/env node
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-
-const server = new Server({
-  name: 'salesforce-simple',
-  version: '1.0.0',
-  capabilities: { tools: {} }
+export const configSchema = z.object({
+  salesforceUsername: z.string().optional(),
 });
 
-// SOQL query tool
-server.setRequestHandler('tools/list', async () => ({
-  tools: [{
-    name: 'soql_query',
-    description: 'Execute SOQL on Salesforce',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string' }
-      },
-      required: ['query']
-    }
-  }]
-}));
+export default function createServer({ config }) {
+  const server = new McpServer({
+    name: "salesforce-simple",
+    version: "1.0.0",
+  });
 
-server.setRequestHandler('tools/call', async (request) => {
-  const { query } = request.params.arguments;
+  server.registerTool("soql_query", {
+    title: "SOQL Query",
+    description: "Execute SOQL on Salesforce",
+    inputSchema: z.object({
+      query: z.string().describe("SOQL query to execute"),
+    }),
+  }, async (input) => {
+    const username = config?.salesforceUsername || process.env.SALESFORCE_USERNAME || 'maya@ecotoreda.com';
 
-  // For now, return a placeholder - you'll configure real auth on Smithery
-  return {
-    content: [{
-      type: 'text',
-      text: `SOQL: ${query}\nOrg: ${process.env.SALESFORCE_USERNAME || 'maya@ecotoreda.com'}`
-    }]
-  };
-});
+    return {
+      content: [{
+        type: "text",
+        text: `SOQL: ${input.query}\nOrg: ${username}`
+      }]
+    };
+  });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
-console.error('Salesforce MCP running');
+  return server.server;
+}
