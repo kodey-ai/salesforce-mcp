@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import {
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import express from 'express';
 
 const server = new Server({
   name: 'salesforce-simple',
@@ -12,7 +17,7 @@ const server = new Server({
   },
 });
 
-server.setRequestHandler('tools/list', async () => ({
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [{
     name: 'soql_query',
     description: 'Execute SOQL queries on Salesforce',
@@ -29,7 +34,7 @@ server.setRequestHandler('tools/list', async () => ({
   }],
 }));
 
-server.setRequestHandler('tools/call', async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === 'soql_query') {
     const { query } = request.params.arguments;
     const username = process.env.SALESFORCE_USERNAME || 'maya@ecotoreda.com';
@@ -46,9 +51,21 @@ server.setRequestHandler('tools/call', async (request) => {
 });
 
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Salesforce MCP Server running on stdio');
+  const app = express();
+  const port = process.env.PORT || 3000;
+
+  app.get('/sse', async (req, res) => {
+    const transport = new SSEServerTransport('/message', res);
+    await server.connect(transport);
+  });
+
+  app.post('/message', async (req, res) => {
+    // Message handling is done by the SSE transport
+  });
+
+  app.listen(port, () => {
+    console.error(`Salesforce MCP Server running on port ${port}`);
+  });
 }
 
 main();
