@@ -69,7 +69,7 @@ export default function createServer({ config }) {
         refreshToken: config.refreshToken
       });
 
-      await conn.refresh(config.refreshToken);
+      // Connection will auto-refresh when needed
       return conn;
     }
 
