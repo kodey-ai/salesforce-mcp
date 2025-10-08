@@ -46,7 +46,25 @@ export default function createServer({ config }) {
       return conn;
     }
 
-    // Option 2: Username/Password Flow
+    // Option 2: OAuth 2.0 Username-Password Flow (with Consumer Key/Secret)
+    if (config.username && config.password && config.clientId && config.clientSecret) {
+      const conn = new jsforce.Connection({
+        oauth2: {
+          clientId: config.clientId,
+          clientSecret: config.clientSecret
+        },
+        loginUrl: config.loginUrl || 'https://login.salesforce.com'
+      });
+
+      const password = config.securityToken
+        ? config.password + config.securityToken
+        : config.password;
+
+      await conn.login(config.username, password);
+      return conn;
+    }
+
+    // Option 3: Username/Password Flow (without OAuth)
     if (config.username && config.password) {
       const conn = new jsforce.Connection({
         loginUrl: config.loginUrl || 'https://login.salesforce.com'
@@ -60,7 +78,7 @@ export default function createServer({ config }) {
       return conn;
     }
 
-    // Option 3: Access Token (if already authenticated)
+    // Option 4: Access Token (if already authenticated)
     if (config.instanceUrl && config.accessToken) {
       return new jsforce.Connection({
         instanceUrl: config.instanceUrl,
@@ -68,7 +86,7 @@ export default function createServer({ config }) {
       });
     }
 
-    throw new Error('Authentication configuration missing. Provide either: (refreshToken + clientId + clientSecret) or (username + password)');
+    throw new Error('Authentication configuration missing. Provide either: (refreshToken + clientId + clientSecret) or (username + password + clientId + clientSecret) or (username + password)');
   }
 
   server.registerTool(
