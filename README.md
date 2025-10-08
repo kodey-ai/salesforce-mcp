@@ -2,7 +2,7 @@
 
 MCP Server for Interacting with Salesforce Orgs
 
-[![NPM](https://img.shields.io/npm/v/@salesforce/mcp.svg?label=@salesforce/mcp)](https://www.npmjs.com/package/@salesforce/mcp) [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/license/apache-2-0)
+[![NPM](https://img.shields.io/npm/v/@salesforce/mcp.svg?label=@salesforce/mcp)](https://www.npmjs.com/package/@salesforce/mcp) [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/license/apache-2-0) [![smithery badge](https://smithery.ai/badge/@kodey-ai/salesforce-mcp-server)](https://smithery.ai/server/@kodey-ai/salesforce-mcp-server)
 
 ## Feedback
 
@@ -385,6 +385,14 @@ Includes these tools, which aren't yet generally available:
 **NOTE:** The tools marked NON-GA are not yet generally available, specify the `--allow-non-ga-tools` flag to use them. 
 
 ## Configure Other Clients to Use the Salesforce DX MCP Server
+
+### Installing via Smithery
+
+To install salesforce-mcp-server automatically via [Smithery](https://smithery.ai/server/@kodey-ai/salesforce-mcp-server):
+
+```bash
+npx -y @smithery/cli install @kodey-ai/salesforce-mcp-server
+```
 
 **Cursor**
 
