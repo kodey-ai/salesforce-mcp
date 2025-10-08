@@ -195,5 +195,5 @@ export default function createServer({ config }) {
     }
   );
 
-  return server.server;
+  return server;
 }
