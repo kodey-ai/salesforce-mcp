@@ -29,7 +29,35 @@ export default function createServer({ config }) {
 
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
-    // Option 1: OAuth with Refresh Token (Recommended)
+    // Option 1: OAuth 2.0 Client Credentials Flow (Recommended - no username/password needed)
+    if (config.clientId && config.clientSecret && !config.username && !config.refreshToken) {
+      const tokenUrl = `${config.instanceUrl || 'https://login.salesforce.com'}/services/oauth2/token`;
+
+      const params = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: config.clientId,
+        client_secret: config.clientSecret
+      });
+
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(`OAuth Client Credentials failed: ${data.error} - ${data.error_description}`);
+      }
+
+      return new jsforce.Connection({
+        instanceUrl: data.instance_url,
+        accessToken: data.access_token
+      });
+    }
+
+    // Option 2: OAuth with Refresh Token
     if (config.refreshToken && config.clientId && config.clientSecret) {
       const conn = new jsforce.Connection({
         oauth2: {
@@ -41,12 +69,11 @@ export default function createServer({ config }) {
         refreshToken: config.refreshToken
       });
 
-      // Refresh the access token
       await conn.refresh(config.refreshToken);
       return conn;
     }
 
-    // Option 2: OAuth 2.0 Username-Password Flow (with Consumer Key/Secret)
+    // Option 3: OAuth 2.0 Username-Password Flow (with Consumer Key/Secret)
     if (config.username && config.password && config.clientId && config.clientSecret) {
       const conn = new jsforce.Connection({
         oauth2: {
@@ -64,7 +91,7 @@ export default function createServer({ config }) {
       return conn;
     }
 
-    // Option 3: Username/Password Flow (without OAuth)
+    // Option 4: Username/Password Flow (without OAuth)
     if (config.username && config.password) {
       const conn = new jsforce.Connection({
         loginUrl: config.loginUrl || 'https://login.salesforce.com'
@@ -78,7 +105,7 @@ export default function createServer({ config }) {
       return conn;
     }
 
-    // Option 4: Access Token (if already authenticated)
+    // Option 5: Access Token (if already authenticated)
     if (config.instanceUrl && config.accessToken) {
       return new jsforce.Connection({
         instanceUrl: config.instanceUrl,
@@ -86,7 +113,7 @@ export default function createServer({ config }) {
       });
     }
 
-    throw new Error('Authentication configuration missing. Provide either: (refreshToken + clientId + clientSecret) or (username + password + clientId + clientSecret) or (username + password)');
+    throw new Error('Authentication configuration missing. Provide either: (clientId + clientSecret) for Client Credentials Flow, (refreshToken + clientId + clientSecret), (username + password + clientId + clientSecret), or (username + password)');
   }
 
   server.registerTool(
