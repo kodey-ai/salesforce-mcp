@@ -3,6 +3,7 @@
 MCP Server for Interacting with Salesforce Orgs
 
 [![NPM](https://img.shields.io/npm/v/@salesforce/mcp.svg?label=@salesforce/mcp)](https://www.npmjs.com/package/@salesforce/mcp) [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/license/apache-2-0)
+[![smithery badge](https://smithery.ai/badge/@kodey-ai/salesforce-mcp-kodey)](https://smithery.ai/server/@kodey-ai/salesforce-mcp-kodey)
 
 ## Feedback
 
@@ -117,6 +118,14 @@ For the best getting-started experience, make sure that you have a Salesforce DX
    - I see that my Apex code violates the pmd:ApexCRUDViolation rule; can you give me more information about this rule?
 
 1. To stop, restart, or view the MCP server configuration, run the **MCP: List Servers** command, click `Salesforce DX`, then click the appropriate option.
+
+### Installing via Smithery
+
+To install salesforce-mcp-kodey automatically via [Smithery](https://smithery.ai/server/@kodey-ai/salesforce-mcp-kodey):
+
+```bash
+npx -y @smithery/cli install @kodey-ai/salesforce-mcp-kodey
+```
 
 ## Configure the DX MCP Server
 
