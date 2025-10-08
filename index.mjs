@@ -5,10 +5,20 @@ import { z } from 'zod';
 import jsforce from 'jsforce';
 
 export const configSchema = z.object({
-  username: z.string().describe('Salesforce username'),
-  password: z.string().describe('Salesforce password'),
+  // OAuth 2.0 with Refresh Token (Recommended)
+  clientId: z.string().optional().describe('Salesforce OAuth2 Client ID (Connected App Consumer Key)'),
+  clientSecret: z.string().optional().describe('Salesforce OAuth2 Client Secret (Connected App Consumer Secret)'),
+  refreshToken: z.string().optional().describe('Salesforce OAuth2 Refresh Token'),
+
+  // Username/Password (Alternative)
+  username: z.string().optional().describe('Salesforce username'),
+  password: z.string().optional().describe('Salesforce password'),
   securityToken: z.string().optional().describe('Salesforce security token (if required)'),
-  loginUrl: z.string().default('https://login.salesforce.com').describe('Salesforce login URL'),
+
+  // Common settings
+  accessToken: z.string().optional().describe('Salesforce access token (if already authenticated)'),
+  instanceUrl: z.string().optional().describe('Salesforce instance URL (e.g., https://yourinstance.my.salesforce.com)'),
+  loginUrl: z.string().default('https://login.salesforce.com').describe('Salesforce login URL (use https://test.salesforce.com for sandboxes)'),
 });
 
 export default function createServer({ config }) {
@@ -19,16 +29,46 @@ export default function createServer({ config }) {
 
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
-    const conn = new jsforce.Connection({
-      loginUrl: config.loginUrl || 'https://login.salesforce.com'
-    });
+    // Option 1: OAuth with Refresh Token (Recommended)
+    if (config.refreshToken && config.clientId && config.clientSecret) {
+      const conn = new jsforce.Connection({
+        oauth2: {
+          clientId: config.clientId,
+          clientSecret: config.clientSecret,
+          redirectUri: 'http://localhost:3000/oauth/callback'
+        },
+        instanceUrl: config.instanceUrl,
+        refreshToken: config.refreshToken
+      });
 
-    const password = config.securityToken
-      ? config.password + config.securityToken
-      : config.password;
+      // Refresh the access token
+      await conn.refresh(config.refreshToken);
+      return conn;
+    }
 
-    await conn.login(config.username, password);
-    return conn;
+    // Option 2: Username/Password Flow
+    if (config.username && config.password) {
+      const conn = new jsforce.Connection({
+        loginUrl: config.loginUrl || 'https://login.salesforce.com'
+      });
+
+      const password = config.securityToken
+        ? config.password + config.securityToken
+        : config.password;
+
+      await conn.login(config.username, password);
+      return conn;
+    }
+
+    // Option 3: Access Token (if already authenticated)
+    if (config.instanceUrl && config.accessToken) {
+      return new jsforce.Connection({
+        instanceUrl: config.instanceUrl,
+        accessToken: config.accessToken
+      });
+    }
+
+    throw new Error('Authentication configuration missing. Provide either: (refreshToken + clientId + clientSecret) or (username + password)');
   }
 
   server.registerTool(
