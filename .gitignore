@@ -50,3 +50,6 @@ node_modules
 /Library
 
 .cursor
+
+# Smithery environment variables (contains sensitive credentials)
+.smithery/.env
