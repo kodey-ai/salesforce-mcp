@@ -1,35 +1,25 @@
-name: salesforce-mcp-minimal
-version: 1.0.0
-description: Minimal Salesforce MCP Server for agents
-author: Ecotoreda
-license: MIT
-
-runtime: node
-entrypoint: index.mjs
-
-# No build needed - direct JavaScript
+runtime: "typescript"
+startCommand:
+  type: "stdio"
+  configSchema:
+    type: "object"
+    properties:
+      username:
+        type: "string"
+        description: "Salesforce username"
+      password:
+        type: "string"
+        description: "Salesforce password with security token appended"
+      loginUrl:
+        type: "string"
+        description: "Salesforce login URL (https://login.salesforce.com for production, https://test.salesforce.com for sandbox)"
+        default: "https://login.salesforce.com"
+    required: ["username", "password"]
+  exampleConfig:
+    username: "user@example.com"
+    password: "password123securitytoken"
+    loginUrl: "https://login.salesforce.com"
 build:
-  skip: true
-
-# Environment variables
+  command: "npm install"
 env:
-  required:
-    - name: SALESFORCE_USERNAME
-      description: Salesforce username
-      type: string
-    - name: SALESFORCE_PASSWORD
-      description: Salesforce password with security token
-      type: string
-      secret: true
-    - name: SALESFORCE_LOGIN_URL
-      description: Salesforce login URL (https://login.salesforce.com or https://test.salesforce.com)
-      type: string
-
-capabilities:
-  tools:
-    - name: soql_query
-      description: Execute SOQL queries on Salesforce and return results
-    - name: get_sobject_describe
-      description: Get metadata about a Salesforce object (fields, relationships, etc.)
-    - name: insert_record
-      description: Insert new records into Salesforce objects
+  NODE_ENV: "production"
