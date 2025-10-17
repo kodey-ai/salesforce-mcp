@@ -21,6 +21,7 @@ import { CreateScratchOrgMcpTool } from './tools/create_scratch_org.js';
 import { DeleteOrgMcpTool } from './tools/delete_org.js';
 import { DeployMetadataMcpTool } from './tools/deploy_metadata.js';
 import { GetUsernameMcpTool } from './tools/get_username.js';
+import { InsertRecordMcpTool } from './tools/insert_record.js';
 import { ListAllOrgsMcpTool } from './tools/list_all_orgs.js';
 import { OrgOpenMcpTool } from './tools/open_org.js';
 import { QueryOrgMcpTool } from './tools/run_soql_query.js';
@@ -42,6 +43,7 @@ export class DxCoreMcpProvider extends McpProvider {
       new DeleteOrgMcpTool(),
       new DeployMetadataMcpTool(services),
       new GetUsernameMcpTool(services),
+      new InsertRecordMcpTool(services),
       new ListAllOrgsMcpTool(services),
       new OrgOpenMcpTool(),
       new QueryOrgMcpTool(services),
