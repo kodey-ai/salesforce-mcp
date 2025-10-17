@@ -31,6 +31,8 @@ capabilities:
       description: Execute SOQL queries
     - name: get_sobjects
       description: List Salesforce objects
+    - name: insert_record
+      description: Insert new records into Salesforce objects
 
 install:
   npm:
