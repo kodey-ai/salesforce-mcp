@@ -200,10 +200,10 @@ export default function createServer({ config }) {
     {
       title: 'Insert Record',
       description: 'Insert a new record into a Salesforce object. Provide the object type and field values as a JSON object.',
-      inputSchema: {
+      inputSchema: z.object({
         sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'),
         recordData: z.record(z.any()).describe('JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})'),
-      },
+      }),
     },
     async ({ sobjectType, recordData }) => {
       try {
