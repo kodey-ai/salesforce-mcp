@@ -1,0 +1,19 @@
+{
+  "name": "salesforce-mcp-minimal",
+  "version": "1.0.0",
+  "description": "Minimal Salesforce MCP Server",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "jsforce": "^1.11.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

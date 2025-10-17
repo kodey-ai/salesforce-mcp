@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  salesforce-mcp-server:
+    build:
+      context: ../..
+      dockerfile: packages/mcp/Dockerfile
+    container_name: salesforce-mcp-server
+    ports:
+      - "3000:3000"  # REST API port
+    environment:
+      # Required environment variables for authentication
+      - SALESFORCE_USERNAME=${SALESFORCE_USERNAME}
+      - SALESFORCE_PASSWORD=${SALESFORCE_PASSWORD}
+      - SALESFORCE_LOGIN_URL=${SALESFORCE_LOGIN_URL:-https://login.salesforce.com}
+
+      # Optional OAuth2 credentials
+      - SALESFORCE_CLIENT_ID=${SALESFORCE_CLIENT_ID}
+      - SALESFORCE_CLIENT_SECRET=${SALESFORCE_CLIENT_SECRET}
+
+      # Alternative: Direct access token
+      - SALESFORCE_ACCESS_TOKEN=${SALESFORCE_ACCESS_TOKEN}
+      - SALESFORCE_INSTANCE_URL=${SALESFORCE_INSTANCE_URL}
+
+      # Configuration
+      - SALESFORCE_TOOLSETS=${SALESFORCE_TOOLSETS:-all}
+
+      # Optional environment variables
+      - SALESFORCE_ALLOW_ALL_ORGS=${SALESFORCE_ALLOW_ALL_ORGS:-false}
+      - SALESFORCE_DEBUG=${SALESFORCE_DEBUG:-false}
+      - NODE_ENV=production
+      - PORT=3000
+
+      # Telemetry settings
+      - SF_DISABLE_TELEMETRY=${SF_DISABLE_TELEMETRY:-false}
+
+    volumes:
+      # Mount local Salesforce CLI config for authentication
+      - ~/.sfdx:/root/.sfdx:ro
+      - ~/.sf:/root/.sf:ro
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - mcp-network
+
+    labels:
+      - "com.salesforce.mcp.version=0.21.2"
+      - "com.salesforce.mcp.type=server"
+      - "com.salesforce.mcp.description=Salesforce MCP Server with REST API"
+
+networks:
+  mcp-network:
+    driver: bridge
+    name: salesforce-mcp-network

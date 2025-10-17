@@ -1,0 +1,8 @@
+name: salesforce-mcp-minimal
+version: 1.0.0
+description: Minimal Salesforce MCP Server for agents
+author: Ecotoreda
+license: MIT
+
+runtime: typescript
+entrypoint: index.mjs
