@@ -4,21 +4,48 @@ startCommand:
   configSchema:
     type: "object"
     properties:
+      # OAuth 2.0 with Refresh Token (Recommended)
+      clientId:
+        type: "string"
+        description: "Salesforce OAuth2 Client ID (Connected App Consumer Key)"
+      clientSecret:
+        type: "string"
+        description: "Salesforce OAuth2 Client Secret (Connected App Consumer Secret)"
+      refreshToken:
+        type: "string"
+        description: "Salesforce OAuth2 Refresh Token"
+      # Username/Password (Alternative)
       username:
         type: "string"
         description: "Salesforce username"
       password:
         type: "string"
-        description: "Salesforce password with security token appended"
+        description: "Salesforce password (without security token)"
+      securityToken:
+        type: "string"
+        description: "Salesforce security token (appended to password automatically)"
+      # Common settings
+      accessToken:
+        type: "string"
+        description: "Salesforce access token (if already authenticated)"
+      instanceUrl:
+        type: "string"
+        description: "Salesforce instance URL (e.g., https://yourinstance.my.salesforce.com)"
       loginUrl:
         type: "string"
         description: "Salesforce login URL (https://login.salesforce.com for production, https://test.salesforce.com for sandbox)"
         default: "https://login.salesforce.com"
-    required: ["username", "password"]
   exampleConfig:
-    username: "user@example.com"
-    password: "password123securitytoken"
-    loginUrl: "https://login.salesforce.com"
+    # Option 1: OAuth with Refresh Token (Recommended)
+    clientId: "3MVG9..."
+    clientSecret: "12345..."
+    refreshToken: "5Aep8..."
+    instanceUrl: "https://yourinstance.my.salesforce.com"
+    # Option 2: Username/Password
+    # username: "user@example.com"
+    # password: "MyPassword123"
+    # securityToken: "AbCdEfGhIjKlMnOp"
+    # loginUrl: "https://login.salesforce.com"
 build:
   command: "npm install"
 env:
