@@ -195,5 +195,88 @@ export default function createServer({ config }) {
     }
   );
 
+  server.registerTool(
+    'insert_record',
+    {
+      title: 'Insert Record',
+      description: 'Insert a new record into a Salesforce object. Provide the object type and field values as a JSON object.',
+      inputSchema: {
+        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'),
+        recordData: z.record(z.any()).describe('JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})'),
+      },
+    },
+    async ({ sobjectType, recordData }) => {
+      try {
+        // Validate inputs
+        if (!sobjectType) {
+          return {
+            content: [{
+              type: 'text',
+              text: 'Error: sobjectType parameter is required',
+            }],
+            isError: true,
+          };
+        }
+
+        if (!recordData || Object.keys(recordData).length === 0) {
+          return {
+            content: [{
+              type: 'text',
+              text: 'Error: recordData parameter is required and must contain at least one field',
+            }],
+            isError: true,
+          };
+        }
+
+        const conn = await getSalesforceConnection();
+        const result = await conn.sobject(sobjectType).create(recordData);
+
+        // Handle JSForce result type - can be single or array
+        const singleResult = Array.isArray(result) ? result[0] : result;
+
+        // Check if the result has success property and it's false
+        if ('success' in singleResult && singleResult.success === false) {
+          const errors = Array.isArray(singleResult.errors)
+            ? singleResult.errors.map(e => typeof e === 'string' ? e : JSON.stringify(e)).join(', ')
+            : JSON.stringify(singleResult.errors);
+
+          return {
+            content: [{
+              type: 'text',
+              text: `Failed to insert ${sobjectType} record: ${errors}`,
+            }],
+            isError: true,
+          };
+        }
+
+        // Check if we have an id (successful insert)
+        if (!singleResult.id) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Failed to insert ${sobjectType} record: No record ID returned`,
+            }],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [{
+            type: 'text',
+            text: `Successfully inserted ${sobjectType} record.\n\nRecord ID: ${singleResult.id}\n\nInserted data:\n${JSON.stringify(recordData, null, 2)}`,
+          }],
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error inserting record: ${error.message}`,
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
   return server;
 }

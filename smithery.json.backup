@@ -1,0 +1,43 @@
+{
+  "name": "@salesforce/mcp",
+  "description": "MCP Server for interacting with Salesforce instances",
+  "version": "0.21.2",
+  "author": "Salesforce",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/salesforcecli/mcp",
+  "homepage": "https://github.com/salesforcecli/mcp",
+  "entry": "packages/mcp/bin/run.js",
+  "command": {
+    "type": "stdio",
+    "args": ["--orgs", "{{orgs}}", "--toolsets", "{{toolsets}}"]
+  },
+  "build": {
+    "steps": [
+      {
+        "run": "yarn install",
+        "cwd": "."
+      },
+      {
+        "run": "yarn build",
+        "cwd": "."
+      }
+    ]
+  },
+  "environment": {
+    "NODE_ENV": "production"
+  },
+  "parameters": {
+    "orgs": {
+      "type": "string",
+      "description": "Comma-separated list of authorized org aliases or usernames to allow access to",
+      "required": true,
+      "default": "DEFAULT_TARGET_ORG"
+    },
+    "toolsets": {
+      "type": "string",
+      "description": "Comma-separated list of toolsets to enable (all, core, dx, agent, lwc, aura, mobile, devops)",
+      "required": false,
+      "default": "core,dx"
+    }
+  }
+}

@@ -4,5 +4,32 @@ description: Minimal Salesforce MCP Server for agents
 author: Ecotoreda
 license: MIT
 
-runtime: typescript
+runtime: node
 entrypoint: index.mjs
+
+# No build needed - direct JavaScript
+build:
+  skip: true
+
+# Environment variables
+env:
+  required:
+    - name: SALESFORCE_USERNAME
+      description: Salesforce username
+      type: string
+    - name: SALESFORCE_PASSWORD
+      description: Salesforce password with security token
+      type: string
+      secret: true
+    - name: SALESFORCE_LOGIN_URL
+      description: Salesforce login URL (https://login.salesforce.com or https://test.salesforce.com)
+      type: string
+
+capabilities:
+  tools:
+    - name: soql_query
+      description: Execute SOQL queries on Salesforce and return results
+    - name: get_sobject_describe
+      description: Get metadata about a Salesforce object (fields, relationships, etc.)
+    - name: insert_record
+      description: Insert new records into Salesforce objects
