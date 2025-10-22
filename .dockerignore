@@ -9,3 +9,4 @@ node_modules/
 !smithery.yaml
 !index.mjs
 !package.json
+!package-lock.json
