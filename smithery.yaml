@@ -1,8 +1,7 @@
-runtime: "node"
+runtime: "typescript"
+entrypoint: "index.mjs"
 startCommand:
   type: "stdio"
-  command: "node"
-  args: ["index.mjs"]
   configSchema:
     type: "object"
     properties:
@@ -50,5 +49,6 @@ startCommand:
     # loginUrl: "https://login.salesforce.com"
 build:
   command: "npm install"
+  output: "index.mjs"
 env:
   NODE_ENV: "production"
