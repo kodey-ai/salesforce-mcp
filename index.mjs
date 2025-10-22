@@ -122,9 +122,9 @@ export default function createServer({ config }) {
     {
       title: 'Execute SOQL Query',
       description: 'Execute SOQL queries on Salesforce and return results',
-      inputSchema: z.object({
+      inputSchema: {
         query: z.string().describe('SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)')
-      }),
+      },
     },
     async ({ query }) => {
       try {
@@ -158,9 +158,9 @@ export default function createServer({ config }) {
     {
       title: 'Describe Salesforce Object',
       description: 'Get metadata about a Salesforce object (fields, relationships, etc.)',
-      inputSchema: z.object({
+      inputSchema: {
         objectName: z.string().describe('Salesforce object API name (e.g., Account, Contact, CustomObject__c)')
-      }),
+      },
     },
     async ({ objectName }) => {
       try {
