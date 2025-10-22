@@ -27,8 +27,9 @@ import { directoryParam, usernameOrAliasParam } from '../shared/params.js';
  *
  * Parameters:
  * - sobjectType: The Salesforce object type (e.g., Account, Contact, CustomObject__c)
- * - recordData: JSON object containing the field values for the record
  * - usernameOrAlias: username or alias for the Salesforce org to insert the record into
+ * - directory: The directory to run the command from
+ * - Additional parameters: Any field API names and values to insert (e.g., Name, RecordTypeId, custom_field__c)
  *
  * Returns:
  * - textResponse: Created record ID and success status
@@ -36,10 +37,9 @@ import { directoryParam, usernameOrAliasParam } from '../shared/params.js';
 
 export const insertRecordParamsSchema = z.object({
   sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c). Standard objects use singular form. Custom objects end with __c.'),
-  recordData: z.record(z.any()).describe('JSON object with field API names as keys and values to insert. Required fields must be included (e.g., LastName for Contact, Name for Account). Example: {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"}'),
   usernameOrAlias: usernameOrAliasParam,
   directory: directoryParam,
-});
+}).passthrough();
 
 type InputArgs = z.infer<typeof insertRecordParamsSchema>;
 type InputArgsShape = typeof insertRecordParamsSchema.shape;
@@ -65,8 +65,12 @@ export class InsertRecordMcpTool extends McpTool<InputArgsShape, OutputArgsShape
   public getConfig(): McpToolConfig<InputArgsShape, OutputArgsShape> {
     return {
       title: 'Insert Record',
-      description: 'Insert a new record into a Salesforce org. Provide the object type (e.g., Account, Contact, CustomObject__c) and field values as a JSON object. Returns the created record ID on success. Use this for creating single records; for required fields validation errors, check the Salesforce object schema first.',
-      inputSchema: insertRecordParamsSchema.shape,
+      description: 'Insert a new record into a Salesforce org. Provide the sobjectType and field values directly as parameters. All field API names should be passed directly (e.g., Name, RecordTypeId, custom_field__c). Returns the created record ID on success.',
+      inputSchema: z.object({
+        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, quotation__c)'),
+        usernameOrAlias: usernameOrAliasParam,
+        directory: directoryParam,
+      }).passthrough().shape,
       outputSchema: undefined,
       annotations: {
         openWorldHint: false,
@@ -91,9 +95,12 @@ export class InsertRecordMcpTool extends McpTool<InputArgsShape, OutputArgsShape
         );
       }
 
-      if (!input.recordData || Object.keys(input.recordData).length === 0) {
+      // Extract record data from input by excluding system parameters
+      const { sobjectType, usernameOrAlias, directory, ...recordData } = input;
+
+      if (Object.keys(recordData).length === 0) {
         return textResponse(
-          'The recordData parameter is required and must contain at least one field-value pair',
+          'At least one field-value pair is required for the record',
           true,
         );
       }
@@ -102,7 +109,7 @@ export class InsertRecordMcpTool extends McpTool<InputArgsShape, OutputArgsShape
       const connection = await this.services.getOrgService().getConnection(input.usernameOrAlias);
 
       // Use the JSForce sobject API to create the record
-      const result = await connection.sobject(input.sobjectType).create(input.recordData);
+      const result = await connection.sobject(input.sobjectType).create(recordData);
 
       // Handle JSForce result type - can be single or array
       const singleResult = Array.isArray(result) ? result[0] : result;
@@ -127,7 +134,7 @@ export class InsertRecordMcpTool extends McpTool<InputArgsShape, OutputArgsShape
       }
 
       return textResponse(
-        `Successfully inserted ${input.sobjectType} record.\n\nRecord ID: ${singleResult.id}\n\nInserted data:\n${JSON.stringify(input.recordData, null, 2)}`
+        `Successfully inserted ${input.sobjectType} record.\n\nRecord ID: ${singleResult.id}\n\nInserted data:\n${JSON.stringify(recordData, null, 2)}`
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

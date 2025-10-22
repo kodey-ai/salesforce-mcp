@@ -73,11 +73,9 @@ describe('insert_record', () => {
       name: 'insert_record',
       params: {
         sobjectType: 'Broker__c',
-        recordData: {
-          Name: 'Test Broker',
-          Email__c: 'test.broker@example.com',
-          Phone__c: '555-0123',
-        },
+        Name: 'Test Broker',
+        Email__c: 'test.broker@example.com',
+        Phone__c: '555-0123',
         usernameOrAlias: orgUsername,
         directory: testSession.project.dir,
       },
@@ -100,11 +98,9 @@ describe('insert_record', () => {
       name: 'insert_record',
       params: {
         sobjectType: 'Account',
-        recordData: {
-          Name: 'Test Account',
-          Industry: 'Technology',
-          Phone: '555-0456',
-        },
+        Name: 'Test Account',
+        Industry: 'Technology',
+        Phone: '555-0456',
         usernameOrAlias: orgUsername,
         directory: testSession.project.dir,
       },
@@ -126,10 +122,8 @@ describe('insert_record', () => {
       name: 'insert_record',
       params: {
         sobjectType: 'Contact',
-        recordData: {
-          // Missing required LastName field
-          FirstName: 'Test',
-        },
+        // Missing required LastName field
+        FirstName: 'Test',
         usernameOrAlias: orgUsername,
         directory: testSession.project.dir,
       },
@@ -148,9 +142,7 @@ describe('insert_record', () => {
       name: 'insert_record',
       params: {
         sobjectType: 'NonExistentObject__c',
-        recordData: {
-          Name: 'Test',
-        },
+        Name: 'Test',
         usernameOrAlias: orgUsername,
         directory: testSession.project.dir,
       },
@@ -169,7 +161,7 @@ describe('insert_record', () => {
       name: 'insert_record',
       params: {
         sobjectType: 'Account',
-        recordData: { Name: 'Test' },
+        Name: 'Test',
         usernameOrAlias: '', // Empty username
         directory: testSession.project.dir,
       },
@@ -185,12 +177,12 @@ describe('insert_record', () => {
     );
   });
 
-  it('should handle empty recordData', async () => {
+  it('should handle empty field data', async () => {
     const result = await client.callTool(insertRecordSchema, {
       name: 'insert_record',
       params: {
         sobjectType: 'Account',
-        recordData: {},
+        // Only system parameters, no field data
         usernameOrAlias: orgUsername,
         directory: testSession.project.dir,
       },
@@ -202,7 +194,7 @@ describe('insert_record', () => {
 
     const responseText = result.content[0].text;
     expect(responseText).to.equal(
-      'The recordData parameter is required and must contain at least one field-value pair',
+      'At least one field-value pair is required for the record',
     );
   });
 });

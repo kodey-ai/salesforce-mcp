@@ -200,14 +200,16 @@ export default function createServer({ config }) {
     'insert_record',
     {
       title: 'Insert Record',
-      description: 'Insert a new record into a Salesforce object. Provide the object type and field values as a JSON object.',
-      inputSchema: {
-        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'),
-        recordData: z.record(z.any()).describe('JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})')
-      },
+      description: 'Insert a new record into a Salesforce object. Provide the sobjectType and field values directly as parameters.',
+      inputSchema: z.object({
+        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, quotation__c)')
+      }).passthrough(),
     },
-    async ({ sobjectType, recordData }) => {
+    async (params) => {
       try {
+        // Extract sobjectType and record data from params
+        const { sobjectType, ...recordData } = params;
+
         // Validate inputs
         if (!sobjectType) {
           return {
@@ -219,11 +221,11 @@ export default function createServer({ config }) {
           };
         }
 
-        if (!recordData || Object.keys(recordData).length === 0) {
+        if (Object.keys(recordData).length === 0) {
           return {
             content: [{
               type: 'text',
-              text: 'Error: recordData parameter is required and must contain at least one field',
+              text: 'Error: At least one field-value pair is required for the record',
             }],
             isError: true,
           };
