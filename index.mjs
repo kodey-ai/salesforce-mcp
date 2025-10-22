@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import jsforce from 'jsforce';
 
@@ -121,9 +122,16 @@ export default function createServer({ config }) {
     {
       title: 'Execute SOQL Query',
       description: 'Execute SOQL queries on Salesforce and return results',
-      inputSchema: z.object({
-        query: z.string().describe('SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)'),
-      }),
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)'
+          }
+        },
+        required: ['query']
+      },
     },
     async ({ query }) => {
       try {
@@ -157,9 +165,16 @@ export default function createServer({ config }) {
     {
       title: 'Describe Salesforce Object',
       description: 'Get metadata about a Salesforce object (fields, relationships, etc.)',
-      inputSchema: z.object({
-        objectName: z.string().describe('Salesforce object API name (e.g., Account, Contact, CustomObject__c)'),
-      }),
+      inputSchema: {
+        type: 'object',
+        properties: {
+          objectName: {
+            type: 'string',
+            description: 'Salesforce object API name (e.g., Account, Contact, CustomObject__c)'
+          }
+        },
+        required: ['objectName']
+      },
     },
     async ({ objectName }) => {
       try {
@@ -200,10 +215,21 @@ export default function createServer({ config }) {
     {
       title: 'Insert Record',
       description: 'Insert a new record into a Salesforce object. Provide the object type and field values as a JSON object.',
-      inputSchema: z.object({
-        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'),
-        recordData: z.record(z.any()).describe('JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})'),
-      }),
+      inputSchema: {
+        type: 'object',
+        properties: {
+          sobjectType: {
+            type: 'string',
+            description: 'The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'
+          },
+          recordData: {
+            type: 'object',
+            description: 'JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})',
+            additionalProperties: true
+          }
+        },
+        required: ['sobjectType', 'recordData']
+      },
     },
     async ({ sobjectType, recordData }) => {
       try {
@@ -279,4 +305,36 @@ export default function createServer({ config }) {
   );
 
   return server;
+}
+
+// If running directly (not imported), start the server
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // Get configuration from environment variables
+  const config = {
+    // OAuth settings
+    clientId: process.env.SALESFORCE_CLIENT_ID,
+    clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
+    refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
+
+    // Username/Password
+    username: process.env.SALESFORCE_USERNAME,
+    password: process.env.SALESFORCE_PASSWORD,
+    securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
+
+    // Instance settings
+    instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
+    accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
+    loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
+  };
+
+  // Remove undefined values
+  Object.keys(config).forEach(key => config[key] === undefined && delete config[key]);
+
+  const server = createServer({ config });
+  const transport = new StdioServerTransport();
+
+  server.connect(transport).catch(error => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
 }

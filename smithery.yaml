@@ -1,6 +1,8 @@
-runtime: "typescript"
+runtime: "node"
 startCommand:
   type: "stdio"
+  command: "node"
+  args: ["index.mjs"]
   configSchema:
     type: "object"
     properties:

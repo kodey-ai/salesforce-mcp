@@ -1,0 +1,26 @@
+{
+  "name": "smithery-salesforce",
+  "version": "1.0.0",
+  "description": "Smithery MCP Server for Salesforce with read and insert operations",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "smithery dev src/index.ts",
+    "build": "smithery build src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["mcp", "salesforce", "smithery"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@smithery/cli": "^1.4.6",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@smithery/sdk": "^1.0.0",
+    "jsforce": "^3.10.0",
+    "zod": "^3.22.0"
+  }
+}
