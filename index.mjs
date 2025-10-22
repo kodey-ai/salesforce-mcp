@@ -200,10 +200,10 @@ export default function createServer({ config }) {
     'insert_record',
     {
       title: 'Insert Record',
-      description: 'Insert a new record into a Salesforce object. Provide the sobjectType and field values directly as parameters.',
-      inputSchema: z.object({
+      description: 'Insert a new record into a Salesforce object. Provide the sobjectType and all field values directly as parameters (not wrapped in recordData).',
+      inputSchema: {
         sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, quotation__c)')
-      }).passthrough(),
+      },
     },
     async (params) => {
       try {
