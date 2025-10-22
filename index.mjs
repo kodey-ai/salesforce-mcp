@@ -123,14 +123,7 @@ export default function createServer({ config }) {
       title: 'Execute SOQL Query',
       description: 'Execute SOQL queries on Salesforce and return results',
       inputSchema: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)'
-          }
-        },
-        required: ['query']
+        query: z.string().describe('SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)')
       },
     },
     async ({ query }) => {
@@ -166,14 +159,7 @@ export default function createServer({ config }) {
       title: 'Describe Salesforce Object',
       description: 'Get metadata about a Salesforce object (fields, relationships, etc.)',
       inputSchema: {
-        type: 'object',
-        properties: {
-          objectName: {
-            type: 'string',
-            description: 'Salesforce object API name (e.g., Account, Contact, CustomObject__c)'
-          }
-        },
-        required: ['objectName']
+        objectName: z.string().describe('Salesforce object API name (e.g., Account, Contact, CustomObject__c)')
       },
     },
     async ({ objectName }) => {
@@ -216,19 +202,8 @@ export default function createServer({ config }) {
       title: 'Insert Record',
       description: 'Insert a new record into a Salesforce object. Provide the object type and field values as a JSON object.',
       inputSchema: {
-        type: 'object',
-        properties: {
-          sobjectType: {
-            type: 'string',
-            description: 'The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'
-          },
-          recordData: {
-            type: 'object',
-            description: 'JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})',
-            additionalProperties: true
-          }
-        },
-        required: ['sobjectType', 'recordData']
+        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, CustomObject__c)'),
+        recordData: z.record(z.any()).describe('JSON object with field API names as keys and values to insert. Required fields must be included (e.g., {"FirstName": "John", "LastName": "Doe", "Email": "john@example.com"})')
       },
     },
     async ({ sobjectType, recordData }) => {
