@@ -22,7 +22,7 @@ export const configSchema = z.object({
   loginUrl: z.string().default('https://login.salesforce.com').describe('Salesforce login URL (use https://test.salesforce.com for sandboxes)'),
 });
 
-export default function createServer({ config }) {
+function createServer({ config = {} } = {}) {
   const server = new McpServer({
     name: 'salesforce-mcp',
     version: '1.0.0',
@@ -30,6 +30,12 @@ export default function createServer({ config }) {
 
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
+    // Check if any credentials are provided
+    const hasCredentials = config.clientId || config.username || config.accessToken;
+    if (!hasCredentials) {
+      throw new Error('No Salesforce credentials configured. Please provide authentication via environment variables or config.');
+    }
+
     // Option 1: OAuth 2.0 Client Credentials Flow (Recommended - no username/password needed)
     if (config.clientId && config.clientSecret && !config.username && !config.refreshToken) {
       const tokenUrl = `${config.instanceUrl || 'https://login.salesforce.com'}/services/oauth2/token`;
@@ -201,9 +207,9 @@ export default function createServer({ config }) {
     {
       title: 'Insert Record',
       description: 'Insert a new record into a Salesforce object. Provide the sobjectType and all field values directly as parameters (not wrapped in recordData).',
-      inputSchema: {
+      inputSchema: z.object({
         sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, quotation__c)')
-      },
+      }).passthrough(),
     },
     async (params) => {
       try {
@@ -284,30 +290,38 @@ export default function createServer({ config }) {
   return server;
 }
 
-// If running directly (not imported), start the server
-if (import.meta.url === `file://${process.argv[1]}`) {
-  // Get configuration from environment variables
-  const config = {
-    // OAuth settings
-    clientId: process.env.SALESFORCE_CLIENT_ID,
-    clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
-    refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
+// Create config from environment variables
+const envConfig = {
+  // OAuth settings
+  clientId: process.env.SALESFORCE_CLIENT_ID,
+  clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
+  refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
 
-    // Username/Password
-    username: process.env.SALESFORCE_USERNAME,
-    password: process.env.SALESFORCE_PASSWORD,
-    securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
+  // Username/Password
+  username: process.env.SALESFORCE_USERNAME,
+  password: process.env.SALESFORCE_PASSWORD,
+  securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
 
-    // Instance settings
-    instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
-    accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
-    loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
-  };
+  // Instance settings
+  instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
+  accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
+  loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
+};
 
-  // Remove undefined values
-  Object.keys(config).forEach(key => config[key] === undefined && delete config[key]);
+// Remove undefined values
+Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
+// Export factory function for Smithery/HTTP usage
+// Smithery will call this and expects the server instance
+export default function({ config = envConfig } = {}) {
   const server = createServer({ config });
+  // Return server.server for Smithery HTTP wrapper compatibility
+  return server.server;
+};
+
+// If running directly (not imported), start with stdio transport
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const server = createServer({ config: envConfig });
   const transport = new StdioServerTransport();
 
   server.connect(transport).catch(error => {
