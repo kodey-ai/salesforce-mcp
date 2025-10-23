@@ -2,6 +2,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { createStatelessServer } from '@smithery/sdk/server/stateless.js';
 import jsforce from 'jsforce';
 
 function createServer({ config = {} } = {}) {
@@ -293,16 +294,21 @@ const envConfig = {
 // Remove undefined values
 Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
-// Export factory function for Smithery/HTTP usage
-// Smithery will call this and expects the server instance
-export default function({ config = envConfig } = {}) {
-  const server = createServer({ config });
-  // Return the McpServer instance directly for Smithery HTTP wrapper compatibility
-  return server;
-};
+// Create factory function for Smithery
+function createMcpServer({ config = envConfig } = {}) {
+  return createServer({ config });
+}
 
-// If running directly (not imported), start with stdio transport
-if (import.meta.url === `file://${process.argv[1]}`) {
+// For Smithery HTTP hosting
+if (process.env.PORT) {
+  // HTTP mode for Smithery deployment
+  const app = createStatelessServer(createMcpServer).app;
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.error(`Salesforce MCP Server running on port ${port}`);
+  });
+} else {
+  // Stdio mode for local development
   const server = createServer({ config: envConfig });
   const transport = new StdioServerTransport();
 
@@ -311,3 +317,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   });
 }
+
+// Export for module usage
+export default createMcpServer;
