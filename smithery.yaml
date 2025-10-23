@@ -1,7 +1,7 @@
 runtime: "typescript"
 entrypoint: "index.mjs"
 startCommand:
-  type: "http"
+  type: "stdio"
   configSchema:
     type: "object"
     properties:
