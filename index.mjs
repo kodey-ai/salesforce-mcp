@@ -3,6 +3,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createStatelessServer } from '@smithery/sdk/server/stateless.js';
+import express from 'express';
+import cors from 'cors';
 import jsforce from 'jsforce';
 
 function createServer({ config = {} } = {}) {
@@ -294,18 +296,40 @@ const envConfig = {
 // Remove undefined values
 Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
-// Create factory function for Smithery
-function createMcpServer({ config = envConfig } = {}) {
-  return createServer({ config });
+// Create factory function for Smithery - IMPORTANT: Must return the server, not just the function
+function createMcpServer({ config = {} } = {}) {
+  // Merge the provided config with env config
+  const mergedConfig = { ...envConfig, ...config };
+  return createServer({ config: mergedConfig });
 }
 
 // For Smithery HTTP hosting
 if (process.env.PORT) {
   // HTTP mode for Smithery deployment
-  const app = createStatelessServer(createMcpServer).app;
   const port = process.env.PORT || 3000;
-  app.listen(port, () => {
-    console.error(`Salesforce MCP Server running on port ${port}`);
+
+  // Create Express app with CORS enabled for all origins
+  const app = express();
+
+  // Configure CORS with proper MCP headers for all origins
+  app.use(cors({
+    origin: '*',  // Allow all origins
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: '*',  // Allow all headers
+    exposedHeaders: ['mcp-session-id', 'mcp-protocol-version'],
+    maxAge: 86400
+  }));
+
+  // Use the smithery SDK's createStatelessServer with our configured app
+  const statelessServer = createStatelessServer(createMcpServer, {
+    app: app,
+    logLevel: 'info'
+  });
+
+  // The statelessServer returns an object with .app property
+  statelessServer.app.listen(port, () => {
+    console.log(`Salesforce MCP Server running on port ${port} (Smithery HTTP mode with CORS enabled for all origins)`);
   });
 } else {
   // Stdio mode for local development

@@ -1,5 +1,5 @@
 runtime: "typescript"
-entrypoint: ".smithery/index.cjs"
+entrypoint: "index.mjs"
 startCommand:
   type: "http"
   configSchema:
@@ -48,7 +48,7 @@ startCommand:
     # securityToken: "AbCdEfGhIjKlMnOp"
     # loginUrl: "https://login.salesforce.com"
 build:
-  command: "npx -y @smithery/cli build -o .smithery/index.cjs"
-  output: ".smithery/index.cjs"
+  command: "npm install"
+  output: "index.mjs"
 env:
   NODE_ENV: "production"
