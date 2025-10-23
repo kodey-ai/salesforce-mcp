@@ -66,11 +66,7 @@ export class InsertRecordMcpTool extends McpTool<InputArgsShape, OutputArgsShape
     return {
       title: 'Insert Record',
       description: 'Insert a new record into a Salesforce org. Provide the sobjectType and field values directly as parameters. All field API names should be passed directly (e.g., Name, RecordTypeId, custom_field__c). Returns the created record ID on success.',
-      inputSchema: z.object({
-        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, Opportunity, quotation__c)'),
-        usernameOrAlias: usernameOrAliasParam,
-        directory: directoryParam,
-      }).passthrough().shape,
+      inputSchema: insertRecordParamsSchema as unknown as InputArgsShape,
       outputSchema: undefined,
       annotations: {
         openWorldHint: false,
