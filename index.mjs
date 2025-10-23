@@ -315,8 +315,8 @@ Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete env
 // Smithery will call this and expects the server instance
 export default function({ config = envConfig } = {}) {
   const server = createServer({ config });
-  // Return server.server for Smithery HTTP wrapper compatibility
-  return server.server;
+  // Return the McpServer instance directly for Smithery HTTP wrapper compatibility
+  return server;
 };
 
 // If running directly (not imported), start with stdio transport
