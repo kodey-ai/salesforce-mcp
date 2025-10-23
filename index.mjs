@@ -22,7 +22,7 @@ export const configSchema = z.object({
   loginUrl: z.string().default('https://login.salesforce.com').describe('Salesforce login URL (use https://test.salesforce.com for sandboxes)'),
 });
 
-function createServer({ config }) {
+function createServer({ config = {} } = {}) {
   const server = new McpServer({
     name: 'salesforce-mcp',
     version: '1.0.0',
