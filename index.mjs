@@ -22,7 +22,7 @@ export const configSchema = z.object({
   loginUrl: z.string().default('https://login.salesforce.com').describe('Salesforce login URL (use https://test.salesforce.com for sandboxes)'),
 });
 
-export default function createServer({ config }) {
+function createServer({ config }) {
   const server = new McpServer({
     name: 'salesforce-mcp',
     version: '1.0.0',
@@ -284,7 +284,10 @@ export default function createServer({ config }) {
   return server;
 }
 
-// If running directly (not imported), start the server
+// Export as default for Smithery/HTTP usage
+export default createServer;
+
+// If running directly (not imported), start the server with stdio transport
 if (import.meta.url === `file://${process.argv[1]}`) {
   // Get configuration from environment variables
   const config = {
