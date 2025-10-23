@@ -1,19 +1,15 @@
 module.exports = {
-  // Entry point for your MCP server
-  entry: './index.mjs',
-
-  // Transport type - stdio for command-line usage
-  transport: 'stdio',
-
-  // Build configuration
-  build: {
-    // Use ESM format to support import.meta
-    format: 'esm',
-
-    // External modules that shouldn't be bundled
+  esbuild: {
+    // Mark dependencies as external (not bundled)
     external: [
       'jsforce',
-      'zod'
-    ]
+      'zod',
+      '@modelcontextprotocol/sdk',
+      '@smithery/sdk'
+    ],
+    // Use ESM format to support import.meta
+    format: 'esm',
+    // Set Node.js target version
+    target: 'node18'
   }
 };
