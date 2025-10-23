@@ -311,8 +311,11 @@ const envConfig = {
 // Remove undefined values
 Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
-// Export server instance for Smithery/HTTP usage
-export default createServer({ config: envConfig });
+// Export factory function for Smithery/HTTP usage
+// Smithery will call this with config from environment
+export default function() {
+  return createServer({ config: envConfig });
+};
 
 // If running directly (not imported), start with stdio transport
 if (import.meta.url === `file://${process.argv[1]}`) {
