@@ -1,11 +1,6 @@
 module.exports = {
   esbuild: {
-    // Mark dependencies as external (not bundled)
-    // Note: @smithery/sdk and @modelcontextprotocol/sdk should be bundled
-    external: [
-      'jsforce',
-      'zod'
-    ],
+    // Bundle all dependencies for a self-contained server
     // Use ESM format to support import.meta
     format: 'esm',
     // Set Node.js target version
