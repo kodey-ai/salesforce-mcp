@@ -17,6 +17,9 @@ module.exports = {
     // Output directory for built files
     outDir: '.smithery',
 
+    // Use ESM format to support import.meta
+    format: 'esm',
+
     // External modules that shouldn't be bundled
     external: [
       '@salesforce/core',
