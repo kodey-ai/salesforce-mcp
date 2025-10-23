@@ -1,37 +1,29 @@
 #!/usr/bin/env node
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
 import jsforce from 'jsforce';
 
-export const configSchema = z.object({
-  // OAuth 2.0 with Refresh Token (Recommended)
-  clientId: z.string().optional().describe('Salesforce OAuth2 Client ID (Connected App Consumer Key)'),
-  clientSecret: z.string().optional().describe('Salesforce OAuth2 Client Secret (Connected App Consumer Secret)'),
-  refreshToken: z.string().optional().describe('Salesforce OAuth2 Refresh Token'),
-
-  // Username/Password (Alternative)
-  username: z.string().optional().describe('Salesforce username'),
-  password: z.string().optional().describe('Salesforce password'),
-  securityToken: z.string().optional().describe('Salesforce security token (if required)'),
-
-  // Common settings
-  accessToken: z.string().optional().describe('Salesforce access token (if already authenticated)'),
-  instanceUrl: z.string().optional().describe('Salesforce instance URL (e.g., https://yourinstance.my.salesforce.com)'),
-  loginUrl: z.string().default('https://login.salesforce.com').describe('Salesforce login URL (use https://test.salesforce.com for sandboxes)'),
-});
-
 function createServer({ config = {} } = {}) {
-  const server = new McpServer({
+  const server = new Server({
     name: 'salesforce-mcp',
     version: '1.0.0',
+  }, {
+    capabilities: {
+      tools: {}
+    }
   });
+
+  // Validate config early
+  const hasCredentials = config.clientId || config.username || config.accessToken;
+  if (!hasCredentials) {
+    console.error('❌ No Salesforce credentials configured. Please provide authentication via config.');
+    console.error('Expected: clientId/clientSecret, username/password, or accessToken/instanceUrl');
+  }
 
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
     // Check if any credentials are provided
-    const hasCredentials = config.clientId || config.username || config.accessToken;
     if (!hasCredentials) {
       throw new Error('No Salesforce credentials configured. Please provide authentication via environment variables or config.');
     }
@@ -123,169 +115,159 @@ function createServer({ config = {} } = {}) {
     throw new Error('Authentication configuration missing. Provide either: (clientId + clientSecret) for Client Credentials Flow, (refreshToken + clientId + clientSecret), (username + password + clientId + clientSecret), or (username + password)');
   }
 
-  server.registerTool(
-    'soql_query',
-    {
-      title: 'Execute SOQL Query',
-      description: 'Execute SOQL queries on Salesforce and return results',
-      inputSchema: {
-        query: z.string().describe('SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)')
+  // Register tools/list handler
+  server.setRequestHandler('tools/list', async () => ({
+    tools: [
+      {
+        name: 'soql_query',
+        description: 'Execute SOQL queries on Salesforce and return results',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'SOQL query to execute (e.g., SELECT Id, Name FROM Account LIMIT 10)'
+            }
+          },
+          required: ['query']
+        }
       },
-    },
-    async ({ query }) => {
-      try {
-        const conn = await getSalesforceConnection();
-        const result = await conn.query(query);
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              totalSize: result.totalSize,
-              done: result.done,
-              records: result.records
-            }, null, 2),
-          }],
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Error executing query: ${error.message}`,
-          }],
-          isError: true,
-        };
-      }
-    }
-  );
-
-  server.registerTool(
-    'get_sobject_describe',
-    {
-      title: 'Describe Salesforce Object',
-      description: 'Get metadata about a Salesforce object (fields, relationships, etc.)',
-      inputSchema: {
-        objectName: z.string().describe('Salesforce object API name (e.g., Account, Contact, CustomObject__c)')
+      {
+        name: 'get_sobject_describe',
+        description: 'Get metadata about a Salesforce object (fields, relationships, etc.)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            objectName: {
+              type: 'string',
+              description: 'Salesforce object API name (e.g., Account, Contact, CustomObject__c)'
+            }
+          },
+          required: ['objectName']
+        }
       },
-    },
-    async ({ objectName }) => {
-      try {
-        const conn = await getSalesforceConnection();
-        const metadata = await conn.sobject(objectName).describe();
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              name: metadata.name,
-              label: metadata.label,
-              fields: metadata.fields.map(f => ({
-                name: f.name,
-                label: f.label,
-                type: f.type,
-                length: f.length,
-                required: !f.nillable,
-                updateable: f.updateable
-              }))
-            }, null, 2),
-          }],
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Error describing object: ${error.message}`,
-          }],
-          isError: true,
-        };
+      {
+        name: 'insert_record',
+        description: 'Insert a new record into a Salesforce object',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sobjectType: {
+              type: 'string',
+              description: 'The Salesforce object API name (e.g., Account, Contact, quotation__c)'
+            },
+            recordData: {
+              type: 'object',
+              description: 'JSON object with field values',
+              additionalProperties: true
+            }
+          },
+          required: ['sobjectType', 'recordData']
+        }
       }
-    }
-  );
+    ]
+  }));
 
-  server.registerTool(
-    'insert_record',
-    {
-      title: 'Insert Record',
-      description: 'Insert a new record into a Salesforce object. Provide the sobjectType and all field values directly as parameters (not wrapped in recordData).',
-      inputSchema: z.object({
-        sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, quotation__c)')
-      }).passthrough(),
-    },
-    async (params) => {
-      try {
-        // Extract sobjectType and record data from params
-        const { sobjectType, ...recordData } = params;
+  // Register tools/call handler
+  server.setRequestHandler('tools/call', async (request) => {
+    const { name, arguments: args } = request.params;
 
-        // Validate inputs
-        if (!sobjectType) {
+    try {
+      const conn = await getSalesforceConnection();
+
+      switch (name) {
+        case 'soql_query': {
+          const result = await conn.query(args.query);
           return {
             content: [{
               type: 'text',
-              text: 'Error: sobjectType parameter is required',
-            }],
-            isError: true,
+              text: JSON.stringify({
+                totalSize: result.totalSize,
+                done: result.done,
+                records: result.records
+              }, null, 2)
+            }]
           };
         }
 
-        if (Object.keys(recordData).length === 0) {
+        case 'get_sobject_describe': {
+          const metadata = await conn.sobject(args.objectName).describe();
           return {
             content: [{
               type: 'text',
-              text: 'Error: At least one field-value pair is required for the record',
-            }],
-            isError: true,
+              text: JSON.stringify({
+                name: metadata.name,
+                label: metadata.label,
+                fields: metadata.fields.map(f => ({
+                  name: f.name,
+                  label: f.label,
+                  type: f.type,
+                  length: f.length,
+                  required: !f.nillable,
+                  updateable: f.updateable
+                }))
+              }, null, 2)
+            }]
           };
         }
 
-        const conn = await getSalesforceConnection();
-        const result = await conn.sobject(sobjectType).create(recordData);
+        case 'insert_record': {
+          const { sobjectType, recordData } = args;
 
-        // Handle JSForce result type - can be single or array
-        const singleResult = Array.isArray(result) ? result[0] : result;
+          if (!sobjectType || !recordData) {
+            return {
+              content: [{
+                type: 'text',
+                text: 'Error: sobjectType and recordData are required'
+              }],
+              isError: true
+            };
+          }
 
-        // Check if the result has success property and it's false
-        if ('success' in singleResult && singleResult.success === false) {
-          const errors = Array.isArray(singleResult.errors)
-            ? singleResult.errors.map(e => typeof e === 'string' ? e : JSON.stringify(e)).join(', ')
-            : JSON.stringify(singleResult.errors);
+          const result = await conn.sobject(sobjectType).create(recordData);
+          const singleResult = Array.isArray(result) ? result[0] : result;
+
+          if ('success' in singleResult && singleResult.success === false) {
+            const errors = singleResult.errors
+              ? singleResult.errors.map(e => typeof e === 'string' ? e : JSON.stringify(e)).join(', ')
+              : 'Unknown error';
+
+            return {
+              content: [{
+                type: 'text',
+                text: `Failed to insert ${sobjectType} record: ${errors}`
+              }],
+              isError: true
+            };
+          }
 
           return {
             content: [{
               type: 'text',
-              text: `Failed to insert ${sobjectType} record: ${errors}`,
-            }],
-            isError: true,
+              text: `Successfully inserted ${sobjectType} record.\nRecord ID: ${singleResult.id}\n\nInserted data:\n${JSON.stringify(recordData, null, 2)}`
+            }]
           };
         }
 
-        // Check if we have an id (successful insert)
-        if (!singleResult.id) {
+        default:
           return {
             content: [{
               type: 'text',
-              text: `Failed to insert ${sobjectType} record: No record ID returned`,
+              text: `Unknown tool: ${name}`
             }],
-            isError: true,
+            isError: true
           };
-        }
-
-        return {
-          content: [{
-            type: 'text',
-            text: `Successfully inserted ${sobjectType} record.\n\nRecord ID: ${singleResult.id}\n\nInserted data:\n${JSON.stringify(recordData, null, 2)}`,
-          }],
-        };
-      } catch (error) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Error inserting record: ${error.message}`,
-          }],
-          isError: true,
-        };
       }
+    } catch (error) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error: ${error.message}`
+        }],
+        isError: true
+      };
     }
-  );
+  });
 
   return server;
 }
