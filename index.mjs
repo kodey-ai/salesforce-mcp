@@ -30,6 +30,12 @@ function createServer({ config }) {
 
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
+    // Check if any credentials are provided
+    const hasCredentials = config.clientId || config.username || config.accessToken;
+    if (!hasCredentials) {
+      throw new Error('No Salesforce credentials configured. Please provide authentication via environment variables or config.');
+    }
+
     // Option 1: OAuth 2.0 Client Credentials Flow (Recommended - no username/password needed)
     if (config.clientId && config.clientSecret && !config.username && !config.refreshToken) {
       const tokenUrl = `${config.instanceUrl || 'https://login.salesforce.com'}/services/oauth2/token`;
