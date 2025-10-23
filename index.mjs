@@ -3,8 +3,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createStatelessServer } from '@smithery/sdk/server/stateless.js';
-import express from 'express';
-import cors from 'cors';
 import jsforce from 'jsforce';
 
 function createServer({ config = {} } = {}) {
@@ -306,30 +304,33 @@ function createMcpServer({ config = {} } = {}) {
 // For Smithery HTTP hosting
 if (process.env.PORT) {
   // HTTP mode for Smithery deployment
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 8081;  // Smithery uses port 8081
 
-  // Create Express app with CORS enabled for all origins
+  // Create Express app manually for proper CORS configuration
+  const express = (await import('express')).default;
+  const cors = (await import('cors')).default;
   const app = express();
 
-  // Configure CORS with proper MCP headers for all origins
+  // Configure CORS for all origins as required by Smithery
   app.use(cors({
     origin: '*',  // Allow all origins
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: '*',  // Allow all headers
+    allowedHeaders: '*',
     exposedHeaders: ['mcp-session-id', 'mcp-protocol-version'],
     maxAge: 86400
   }));
 
-  // Use the smithery SDK's createStatelessServer with our configured app
+  // Use the smithery SDK's createStatelessServer with the configured app
   const statelessServer = createStatelessServer(createMcpServer, {
     app: app,
     logLevel: 'info'
   });
 
-  // The statelessServer returns an object with .app property
+  // The statelessServer.app is the configured Express app
   statelessServer.app.listen(port, () => {
-    console.log(`Salesforce MCP Server running on port ${port} (Smithery HTTP mode with CORS enabled for all origins)`);
+    console.log(`Salesforce MCP Server running on port ${port} (Smithery HTTP mode)`);
+    console.log(`MCP endpoint available at http://localhost:${port}/mcp`);
   });
 } else {
   // Stdio mode for local development
