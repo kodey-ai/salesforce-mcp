@@ -290,33 +290,33 @@ function createServer({ config = {} } = {}) {
   return server;
 }
 
-// Export as default for Smithery/HTTP usage
-export default createServer;
+// Create config from environment variables
+const envConfig = {
+  // OAuth settings
+  clientId: process.env.SALESFORCE_CLIENT_ID,
+  clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
+  refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
 
-// If running directly (not imported), start the server with stdio transport
+  // Username/Password
+  username: process.env.SALESFORCE_USERNAME,
+  password: process.env.SALESFORCE_PASSWORD,
+  securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
+
+  // Instance settings
+  instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
+  accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
+  loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
+};
+
+// Remove undefined values
+Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
+
+// Export server instance for Smithery/HTTP usage
+export default createServer({ config: envConfig });
+
+// If running directly (not imported), start with stdio transport
 if (import.meta.url === `file://${process.argv[1]}`) {
-  // Get configuration from environment variables
-  const config = {
-    // OAuth settings
-    clientId: process.env.SALESFORCE_CLIENT_ID,
-    clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
-    refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
-
-    // Username/Password
-    username: process.env.SALESFORCE_USERNAME,
-    password: process.env.SALESFORCE_PASSWORD,
-    securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
-
-    // Instance settings
-    instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
-    accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
-    loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
-  };
-
-  // Remove undefined values
-  Object.keys(config).forEach(key => config[key] === undefined && delete config[key]);
-
-  const server = createServer({ config });
+  const server = createServer({ config: envConfig });
   const transport = new StdioServerTransport();
 
   server.connect(transport).catch(error => {
