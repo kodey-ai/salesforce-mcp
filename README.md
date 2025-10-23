@@ -424,3 +424,11 @@ For these other clients, refer to their documentation for adding MCP servers and
 - [Zed](https://github.com/zed-industries/zed)
 - [Windsurf](https://www.windsurf.com/)
 - [Trae](https://trae.ai)
+
+### Installing via Smithery
+
+To install salesforce-mcp-minimal automatically via [Smithery](https://smithery.ai/server/@kodey-ai/salesforce-mcp-minimal):
+
+```bash
+npx -y @smithery/cli install @kodey-ai/salesforce-mcp-minimal
+```
