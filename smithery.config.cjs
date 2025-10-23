@@ -7,7 +7,7 @@ module.exports = {
   repository: 'https://github.com/salesforcecli/mcp',
 
   // Entry point for your MCP server
-  entry: './packages/mcp/bin/run.js',
+  entry: './index.mjs',
 
   // Transport type - stdio for command-line usage
   transport: 'stdio',
