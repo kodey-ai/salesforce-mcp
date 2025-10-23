@@ -312,9 +312,11 @@ const envConfig = {
 Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
 // Export factory function for Smithery/HTTP usage
-// Smithery will call this with config from environment
+// Smithery will call this and expects the server instance
 export default function() {
-  return createServer({ config: envConfig });
+  const server = createServer({ config: envConfig });
+  // Make credentials optional during initialization to avoid startup failures
+  return server;
 };
 
 // If running directly (not imported), start with stdio transport

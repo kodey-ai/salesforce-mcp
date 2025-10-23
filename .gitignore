@@ -51,5 +51,6 @@ node_modules
 
 .cursor
 
-# Smithery environment variables (contains sensitive credentials)
+# Smithery environment variables and build artifacts
 .smithery/.env
+.smithery/index.mjs
