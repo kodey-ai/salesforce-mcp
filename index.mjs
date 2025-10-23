@@ -209,7 +209,7 @@ function createServer({ config = {} } = {}) {
       description: 'Insert a new record into a Salesforce object. Provide the sobjectType and all field values directly as parameters (not wrapped in recordData).',
       inputSchema: z.object({
         sobjectType: z.string().describe('The Salesforce object API name (e.g., Account, Contact, quotation__c)')
-      }).passthrough().shape,
+      }).passthrough(),
     },
     async (params) => {
       try {
@@ -315,8 +315,8 @@ Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete env
 // Smithery will call this and expects the server instance
 export default function() {
   const server = createServer({ config: envConfig });
-  // Make credentials optional during initialization to avoid startup failures
-  return server;
+  // Return server.server for Smithery HTTP wrapper compatibility
+  return server.server;
 };
 
 // If running directly (not imported), start with stdio transport
