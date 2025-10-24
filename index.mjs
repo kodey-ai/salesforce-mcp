@@ -23,6 +23,7 @@ export const configSchema = z.object({
 // Main server factory function for Smithery - MUST be default export
 export default function createServer({ config = {} } = {}) {
   // Config is now directly destructured from the parameters
+  console.log('Server initializing with config keys:', Object.keys(config));
 
   const server = new Server({
     name: 'salesforce-mcp',
@@ -128,9 +129,27 @@ export default function createServer({ config = {} } = {}) {
     throw new Error('Authentication configuration missing. Provide credentials in server configuration.');
   }
 
-  // Register tools/list handler
-  server.setRequestHandler('tools/list', async () => ({
-    tools: [
+  // Register initialize handler for Smithery
+  server.setRequestHandler('initialize', async (request) => {
+    console.log('Initialize request received:', request.params);
+    return {
+      protocolVersion: '0.1.0',
+      serverInfo: {
+        name: 'salesforce-mcp',
+        version: '1.0.0',
+        description: 'Salesforce MCP Server for querying and managing Salesforce data'
+      },
+      capabilities: {
+        tools: {}
+      }
+    };
+  });
+
+  // Register tools/list handler - This MUST work without credentials for Smithery scanning
+  server.setRequestHandler('tools/list', async () => {
+    console.log('Tools list requested - returning tool definitions');
+    return {
+      tools: [
       {
         name: 'soql_query',
         description: 'Execute SOQL queries on Salesforce and return results',
@@ -220,7 +239,8 @@ export default function createServer({ config = {} } = {}) {
         }
       }
     ]
-  }));
+    };
+  });
 
   // Register tools/call handler
   server.setRequestHandler('tools/call', async (request) => {
