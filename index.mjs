@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import jsforce from 'jsforce';
 
 // Main server factory function for Smithery - MUST be default export
-export default async function createServer(options = {}) {
+export default function createServer(options = {}) {
   // Extract config from options (Smithery passes it as { config: {...} })
   const config = options.config || {};
 
-  const server = new Server({
+  const server = new McpServer({
     name: 'salesforce-mcp',
     version: '1.0.0',
   }, {
@@ -114,7 +114,7 @@ export default async function createServer(options = {}) {
   }
 
   // Register tools/list handler
-  server.setRequestHandler('tools/list', async () => ({
+  server.server.setRequestHandler('tools/list', async () => ({
     tools: [
       {
         name: 'soql_query',
@@ -208,7 +208,7 @@ export default async function createServer(options = {}) {
   }));
 
   // Register tools/call handler
-  server.setRequestHandler('tools/call', async (request) => {
+  server.server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     try {
@@ -388,8 +388,8 @@ export default async function createServer(options = {}) {
     }
   });
 
-  // IMPORTANT: Return the server instance for Smithery
-  return server;
+  // IMPORTANT: Return the server.server instance for Smithery
+  return server.server;
 }
 
 // If running directly (not via Smithery), use stdio transport with env vars
@@ -410,10 +410,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Remove undefined values
   Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
-  const server = createServer({ config: envConfig });
+  const mcpServer = createServer({ config: envConfig });
   const transport = new StdioServerTransport();
 
-  server.connect(transport).catch(error => {
+  mcpServer.connect(transport).catch(error => {
     console.error('Failed to start server:', error);
     process.exit(1);
   });
