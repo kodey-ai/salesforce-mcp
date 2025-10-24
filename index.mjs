@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createStatelessServer } from '@smithery/sdk/server/stateless.js';
+import { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/stdio.js';
 import jsforce from 'jsforce';
 
-function createServer({ config = {} } = {}) {
+// Main server factory function for Smithery - MUST be default export
+export default function createServer(options = {}) {
+  // Extract config from options (Smithery passes it as { config: {...} })
+  const config = options.config || {};
+
   const server = new Server({
     name: 'salesforce-mcp',
     version: '1.0.0',
@@ -15,21 +18,16 @@ function createServer({ config = {} } = {}) {
     }
   });
 
-  // Validate config early
-  const hasCredentials = config.clientId || config.username || config.accessToken;
-  if (!hasCredentials) {
-    console.error('❌ No Salesforce credentials configured. Please provide authentication via config.');
-    console.error('Expected: clientId/clientSecret, username/password, or accessToken/instanceUrl');
-  }
-
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
-    // Check if any credentials are provided
+    // Check if any credentials are provided in config
+    const hasCredentials = config.clientId || config.username || config.accessToken;
+
     if (!hasCredentials) {
-      throw new Error('No Salesforce credentials configured. Please provide authentication via environment variables or config.');
+      throw new Error('No Salesforce credentials configured. Please provide authentication in configuration.');
     }
 
-    // Option 1: OAuth 2.0 Client Credentials Flow (Recommended - no username/password needed)
+    // Option 1: OAuth 2.0 Client Credentials Flow
     if (config.clientId && config.clientSecret && !config.username && !config.refreshToken) {
       const tokenUrl = `${config.instanceUrl || 'https://login.salesforce.com'}/services/oauth2/token`;
 
@@ -69,11 +67,10 @@ function createServer({ config = {} } = {}) {
         refreshToken: config.refreshToken
       });
 
-      // Connection will auto-refresh when needed
       return conn;
     }
 
-    // Option 3: OAuth 2.0 Username-Password Flow (with Consumer Key/Secret)
+    // Option 3: OAuth 2.0 Username-Password Flow
     if (config.username && config.password && config.clientId && config.clientSecret) {
       const conn = new jsforce.Connection({
         oauth2: {
@@ -113,7 +110,7 @@ function createServer({ config = {} } = {}) {
       });
     }
 
-    throw new Error('Authentication configuration missing. Provide either: (clientId + clientSecret) for Client Credentials Flow, (refreshToken + clientId + clientSecret), (username + password + clientId + clientSecret), or (username + password)');
+    throw new Error('Authentication configuration missing. Provide credentials in server configuration.');
   }
 
   // Register tools/list handler
@@ -164,6 +161,47 @@ function createServer({ config = {} } = {}) {
             }
           },
           required: ['sobjectType', 'recordData']
+        }
+      },
+      {
+        name: 'update_record',
+        description: 'Update an existing record in Salesforce',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sobjectType: {
+              type: 'string',
+              description: 'The Salesforce object API name'
+            },
+            recordId: {
+              type: 'string',
+              description: 'The ID of the record to update'
+            },
+            recordData: {
+              type: 'object',
+              description: 'JSON object with field values to update',
+              additionalProperties: true
+            }
+          },
+          required: ['sobjectType', 'recordId', 'recordData']
+        }
+      },
+      {
+        name: 'delete_record',
+        description: 'Delete a record from Salesforce',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            sobjectType: {
+              type: 'string',
+              description: 'The Salesforce object API name'
+            },
+            recordId: {
+              type: 'string',
+              description: 'The ID of the record to delete'
+            }
+          },
+          required: ['sobjectType', 'recordId']
         }
       }
     ]
@@ -250,6 +288,86 @@ function createServer({ config = {} } = {}) {
           };
         }
 
+        case 'update_record': {
+          const { sobjectType, recordId, recordData } = args;
+
+          if (!sobjectType || !recordId || !recordData) {
+            return {
+              content: [{
+                type: 'text',
+                text: 'Error: sobjectType, recordId and recordData are required'
+              }],
+              isError: true
+            };
+          }
+
+          const result = await conn.sobject(sobjectType).update({
+            Id: recordId,
+            ...recordData
+          });
+
+          const singleResult = Array.isArray(result) ? result[0] : result;
+
+          if ('success' in singleResult && singleResult.success === false) {
+            const errors = singleResult.errors
+              ? singleResult.errors.map(e => typeof e === 'string' ? e : JSON.stringify(e)).join(', ')
+              : 'Unknown error';
+
+            return {
+              content: [{
+                type: 'text',
+                text: `Failed to update ${sobjectType} record: ${errors}`
+              }],
+              isError: true
+            };
+          }
+
+          return {
+            content: [{
+              type: 'text',
+              text: `Successfully updated ${sobjectType} record.\nRecord ID: ${recordId}\n\nUpdated fields:\n${JSON.stringify(recordData, null, 2)}`
+            }]
+          };
+        }
+
+        case 'delete_record': {
+          const { sobjectType, recordId } = args;
+
+          if (!sobjectType || !recordId) {
+            return {
+              content: [{
+                type: 'text',
+                text: 'Error: sobjectType and recordId are required'
+              }],
+              isError: true
+            };
+          }
+
+          const result = await conn.sobject(sobjectType).destroy(recordId);
+          const singleResult = Array.isArray(result) ? result[0] : result;
+
+          if ('success' in singleResult && singleResult.success === false) {
+            const errors = singleResult.errors
+              ? singleResult.errors.map(e => typeof e === 'string' ? e : JSON.stringify(e)).join(', ')
+              : 'Unknown error';
+
+            return {
+              content: [{
+                type: 'text',
+                text: `Failed to delete ${sobjectType} record: ${errors}`
+              }],
+              isError: true
+            };
+          }
+
+          return {
+            content: [{
+              type: 'text',
+              text: `Successfully deleted ${sobjectType} record with ID: ${recordId}`
+            }]
+          };
+        }
+
         default:
           return {
             content: [{
@@ -270,70 +388,28 @@ function createServer({ config = {} } = {}) {
     }
   });
 
+  // IMPORTANT: Return the server instance for Smithery
   return server;
 }
 
-// Create config from environment variables
-const envConfig = {
-  // OAuth settings
-  clientId: process.env.SALESFORCE_CLIENT_ID,
-  clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
-  refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
+// If running directly (not via Smithery), use stdio transport with env vars
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // Create config from environment variables for local testing
+  const envConfig = {
+    clientId: process.env.SALESFORCE_CLIENT_ID,
+    clientSecret: process.env.SALESFORCE_CLIENT_SECRET,
+    refreshToken: process.env.SALESFORCE_REFRESH_TOKEN,
+    username: process.env.SALESFORCE_USERNAME,
+    password: process.env.SALESFORCE_PASSWORD,
+    securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
+    instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
+    accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
+    loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
+  };
 
-  // Username/Password
-  username: process.env.SALESFORCE_USERNAME,
-  password: process.env.SALESFORCE_PASSWORD,
-  securityToken: process.env.SALESFORCE_SECURITY_TOKEN,
+  // Remove undefined values
+  Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
 
-  // Instance settings
-  instanceUrl: process.env.SALESFORCE_INSTANCE_URL,
-  accessToken: process.env.SALESFORCE_ACCESS_TOKEN,
-  loginUrl: process.env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com',
-};
-
-// Remove undefined values
-Object.keys(envConfig).forEach(key => envConfig[key] === undefined && delete envConfig[key]);
-
-// Create factory function for Smithery - IMPORTANT: Must return the server, not just the function
-function createMcpServer({ config = {} } = {}) {
-  // Merge the provided config with env config
-  const mergedConfig = { ...envConfig, ...config };
-  return createServer({ config: mergedConfig });
-}
-
-// For Smithery HTTP hosting
-if (process.env.PORT) {
-  // HTTP mode for Smithery deployment
-  const port = process.env.PORT || 8081;  // Smithery uses port 8081
-
-  // Create Express app manually for proper CORS configuration
-  const express = (await import('express')).default;
-  const cors = (await import('cors')).default;
-  const app = express();
-
-  // Configure CORS for all origins as required by Smithery
-  app.use(cors({
-    origin: '*',  // Allow all origins
-    credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: '*',
-    exposedHeaders: ['mcp-session-id', 'mcp-protocol-version'],
-    maxAge: 86400
-  }));
-
-  // Use the smithery SDK's createStatelessServer with the configured app
-  const statelessServer = createStatelessServer(createMcpServer, {
-    app: app,
-    logLevel: 'info'
-  });
-
-  // The statelessServer.app is the configured Express app
-  statelessServer.app.listen(port, () => {
-    console.log(`Salesforce MCP Server running on port ${port} (Smithery HTTP mode)`);
-    console.log(`MCP endpoint available at http://localhost:${port}/mcp`);
-  });
-} else {
-  // Stdio mode for local development
   const server = createServer({ config: envConfig });
   const transport = new StdioServerTransport();
 
@@ -342,6 +418,3 @@ if (process.env.PORT) {
     process.exit(1);
   });
 }
-
-// Export for module usage
-export default createMcpServer;
