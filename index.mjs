@@ -4,6 +4,55 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import jsforce from 'jsforce';
 
+// Configuration schema for Smithery
+export const configSchema = {
+  clientId: {
+    type: 'string',
+    description: 'Salesforce OAuth Client ID',
+    required: false
+  },
+  clientSecret: {
+    type: 'string',
+    description: 'Salesforce OAuth Client Secret',
+    required: false
+  },
+  username: {
+    type: 'string',
+    description: 'Salesforce username',
+    required: false
+  },
+  password: {
+    type: 'string',
+    description: 'Salesforce password',
+    required: false
+  },
+  securityToken: {
+    type: 'string',
+    description: 'Salesforce security token (append to password if needed)',
+    required: false
+  },
+  instanceUrl: {
+    type: 'string',
+    description: 'Salesforce instance URL (e.g., https://your-instance.salesforce.com)',
+    required: false
+  },
+  refreshToken: {
+    type: 'string',
+    description: 'OAuth refresh token for persistent authentication',
+    required: false
+  },
+  accessToken: {
+    type: 'string',
+    description: 'Direct access token if already authenticated',
+    required: false
+  },
+  loginUrl: {
+    type: 'string',
+    description: 'Salesforce login URL (defaults to https://login.salesforce.com)',
+    required: false
+  }
+};
+
 // Main server factory function for Smithery - MUST be default export
 export default function createServer(options = {}) {
   // Extract config from options (Smithery passes it as { config: {...} })
@@ -212,7 +261,19 @@ export default function createServer(options = {}) {
     const { name, arguments: args } = request.params;
 
     try {
-      const conn = await getSalesforceConnection();
+      // Only check for connection when actually calling a tool
+      let conn;
+      try {
+        conn = await getSalesforceConnection();
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error: ${error.message}\n\nPlease configure Salesforce credentials in your server settings.`
+          }],
+          isError: true
+        };
+      }
 
       switch (name) {
         case 'soql_query': {
