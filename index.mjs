@@ -5,7 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import jsforce from 'jsforce';
 
 // Main server factory function for Smithery - MUST be default export
-export default function createServer(options = {}) {
+export default async function createServer(options = {}) {
   // Extract config from options (Smithery passes it as { config: {...} })
   const config = options.config || {};
 
