@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import jsforce from 'jsforce';
 
@@ -24,7 +24,7 @@ export const configSchema = z.object({
 export default function createServer({ config = {} } = {}) {
   // Config is now directly destructured from the parameters
 
-  const server = new McpServer({
+  const server = new Server({
     name: 'salesforce-mcp',
     version: '1.0.0',
   }, {
@@ -129,7 +129,7 @@ export default function createServer({ config = {} } = {}) {
   }
 
   // Register tools/list handler
-  server.server.setRequestHandler('tools/list', async () => ({
+  server.setRequestHandler('tools/list', async () => ({
     tools: [
       {
         name: 'soql_query',
@@ -223,7 +223,7 @@ export default function createServer({ config = {} } = {}) {
   }));
 
   // Register tools/call handler
-  server.server.setRequestHandler('tools/call', async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     try {
@@ -415,8 +415,8 @@ export default function createServer({ config = {} } = {}) {
     }
   });
 
-  // IMPORTANT: Return the server.server instance for Smithery
-  return server.server;
+  // IMPORTANT: Return the server instance for Smithery
+  return server;
 }
 
 // If running directly (not via Smithery), use stdio transport with env vars
