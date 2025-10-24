@@ -21,9 +21,8 @@ export const configSchema = z.object({
 });
 
 // Main server factory function for Smithery - MUST be default export
-export default function createServer(options = {}) {
-  // Extract config from options (Smithery passes it as { config: {...} })
-  const config = options.config || {};
+export default function createServer({ config = {} } = {}) {
+  // Config is now directly destructured from the parameters
 
   const server = new McpServer({
     name: 'salesforce-mcp',
@@ -37,7 +36,7 @@ export default function createServer(options = {}) {
   // Helper function to authenticate and get connection
   async function getSalesforceConnection() {
     // Check if any credentials are provided in config
-    const hasCredentials = config.clientId || config.username || config.accessToken;
+    const hasCredentials = config && (config.clientId || config.username || config.accessToken);
 
     if (!hasCredentials) {
       throw new Error('No Salesforce credentials configured. Please provide authentication in configuration.');
