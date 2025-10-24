@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/stdio.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import jsforce from 'jsforce';
 
 // Main server factory function for Smithery - MUST be default export
