@@ -4,54 +4,21 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import jsforce from 'jsforce';
 
-// Configuration schema for Smithery
-export const configSchema = {
-  clientId: {
-    type: 'string',
-    description: 'Salesforce OAuth Client ID',
-    required: false
-  },
-  clientSecret: {
-    type: 'string',
-    description: 'Salesforce OAuth Client Secret',
-    required: false
-  },
-  username: {
-    type: 'string',
-    description: 'Salesforce username',
-    required: false
-  },
-  password: {
-    type: 'string',
-    description: 'Salesforce password',
-    required: false
-  },
-  securityToken: {
-    type: 'string',
-    description: 'Salesforce security token (append to password if needed)',
-    required: false
-  },
-  instanceUrl: {
-    type: 'string',
-    description: 'Salesforce instance URL (e.g., https://your-instance.salesforce.com)',
-    required: false
-  },
-  refreshToken: {
-    type: 'string',
-    description: 'OAuth refresh token for persistent authentication',
-    required: false
-  },
-  accessToken: {
-    type: 'string',
-    description: 'Direct access token if already authenticated',
-    required: false
-  },
-  loginUrl: {
-    type: 'string',
-    description: 'Salesforce login URL (defaults to https://login.salesforce.com)',
-    required: false
-  }
-};
+// Import Zod for schema definition
+import { z } from 'zod';
+
+// Configuration schema for Smithery - using Zod as per documentation
+export const configSchema = z.object({
+  clientId: z.string().optional().describe('Salesforce OAuth Client ID'),
+  clientSecret: z.string().optional().describe('Salesforce OAuth Client Secret'),
+  username: z.string().optional().describe('Salesforce username'),
+  password: z.string().optional().describe('Salesforce password'),
+  securityToken: z.string().optional().describe('Salesforce security token (append to password if needed)'),
+  instanceUrl: z.string().optional().describe('Salesforce instance URL (e.g., https://your-instance.salesforce.com)'),
+  refreshToken: z.string().optional().describe('OAuth refresh token for persistent authentication'),
+  accessToken: z.string().optional().describe('Direct access token if already authenticated'),
+  loginUrl: z.string().default('https://login.salesforce.com').optional().describe('Salesforce login URL')
+});
 
 // Main server factory function for Smithery - MUST be default export
 export default function createServer(options = {}) {
